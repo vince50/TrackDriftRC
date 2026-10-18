@@ -3,9 +3,9 @@
 **Logiciel de conception de pistes de drift RC**, dans un seul fichier HTML, sans installation.
 On indique les dimensions de l'espace et la largeur de voie, on dessine la piste d'un trait à la souris (ou au doigt), et le logiciel calcule une piste propre : courbes lissées, niveaux et rampes, vibreurs, barrières, marquages, vue 3D, dossier PDF et maquette imprimable en 3D.
 
-![Version](https://img.shields.io/badge/version-1.31.2-1f2937)
+![Version](https://img.shields.io/badge/version-1.33.0-1f2937)
 ![HTML](https://img.shields.io/badge/HTML%20%2F%20JavaScript-un%20seul%20fichier-e85d04)
-![Plateformes](https://img.shields.io/badge/PC-compatible-5f8f4e)
+![Plateformes](https://img.shields.io/badge/PC%20%7C%20iPhone%20%7C%20Android-compatible-5f8f4e)
 ![Échelle](https://img.shields.io/badge/%C3%A9chelle-1%2F10-d62828)
 
 > 📖 Captures d'écran et guide illustré : voir le **Wiki** du dépôt.
@@ -36,6 +36,8 @@ Aucune installation et aucun serveur ne sont nécessaires. Seule la **vue 3D** c
 
 **Version en ligne avec GitHub Pages :** *Settings → Pages → Deploy from a branch → `main` / racine*. L'application est ensuite disponible à l'adresse `https://<utilisateur>.github.io/<dépôt>/`, utilisable aussi sur téléphone.
 
+> ⚠️ **Partager le lien, pas le fichier.** Ouvert depuis WhatsApp, Mail ou l'app Fichiers, le fichier `.html` s'affiche dans un *aperçu* qui bloque le JavaScript : la page apparaît mais les boutons ne répondent pas (un bandeau orange le signale). Partagez plutôt le lien GitHub Pages, qui s'ouvre dans Safari ou Chrome. Sur iPhone : *Partager → Sur l'écran d'accueil* pour l'utiliser comme une appli.
+
 ---
 
 ## Fonctionnalités
@@ -56,8 +58,8 @@ Aucune installation et aucun serveur ne sont nécessaires. Seule la **vue 3D** c
 - Mode **niveau travaillé** : on n'affiche et on ne modifie qu'un niveau, l'autre est protégé. Il peut rester visible en transparence.
 
 ### Habillage
-- **Barrières pleines** (7,5 cm, échelle 1/10), posées au sol au **pinceau** ou en mode automatique (extérieur des virages, des deux côtés…). Au niveau 1 et sur les rampes, elles sont **obligatoires des deux côtés**.
-- **Vibreurs rouges et blancs** posés au **pinceau**, avec réglage de la largeur, de la longueur des bandes et de l'épaisseur. Leur profil est incliné (épaisseur réglée au bord, 1 mm vers l'intérieur), avec des extrémités coupées en biais (30° par défaut) et un biseau arrondi.
+- **Barrières pleines** (7,5 cm, échelle 1/10), posées au sol au **pinceau** (clic gauche = ajouter, clic droit = supprimer) ou en mode automatique (extérieur des virages, des deux côtés…). Au niveau 1 et sur les rampes, elles sont **obligatoires des deux côtés**.
+- **Vibreurs rouges et blancs** posés au **pinceau** (clic gauche = ajouter, clic droit = supprimer), avec réglage de la largeur, de la longueur des bandes et de l'épaisseur. Leur profil est incliné (épaisseur réglée au bord, 1 mm vers l'intérieur), avec des extrémités coupées en biais (30° par défaut) et un biseau arrondi.
 - **Marquages blancs** : points de passage numérotés, croix, couloirs d'entrée et de sortie. Chaque entrée est **reliée à sa sortie** par une ligne qui suit la courbe.
 - **Couleur du sol** réglable (gazon, béton, moquette, parquet…), visible en 2D et en 3D.
 
@@ -69,7 +71,7 @@ Aucune installation et aucun serveur ne sont nécessaires. Seule la **vue 3D** c
 
 ## Outils et onglets
 
-La barre d'outils choisit le mode de travail. Seuls les onglets utiles à l'outil choisi sont affichés ; **Fichier** et **Aide** restent toujours visibles.
+La barre d'outils choisit le mode de travail. Chaque outil ouvre son onglet principal, et seuls les onglets utiles à l'outil choisi sont affichés ; **Fichier** et **Aide** restent toujours visibles.
 
 | Outil | Rôle | Onglets affichés |
 |---|---|---|
@@ -78,8 +80,8 @@ La barre d'outils choisit le mode de travail. Seuls les onglets utiles à l'outi
 | **Gomme** | Supprimer une portion | Édition |
 | ⛰️ **Niveau** | Peindre une portion au niveau 0 ou 1 | Niveaux, Édition |
 | ✥ **Déplacer** | Déplacer toute la piste | Piste |
-| 🚧 **Barrières** | Peindre le masque des barrières du sol | Barrières, Édition |
-| 🟥 **Vibreurs** | Peindre le masque des vibreurs | Vibreurs, Édition |
+| 🚧 **Barrières** | Poser ou retirer les barrières du sol au pinceau | Barrières, Édition |
+| 🟥 **Vibreurs** | Poser ou retirer les vibreurs au pinceau | Vibreurs, Édition |
 | ◯ **Marquage** | Poser des points, croix et couloirs | Marquage, Édition |
 
 ---
@@ -90,8 +92,9 @@ La barre d'outils choisit le mode de travail. Seuls les onglets utiles à l'outi
 |---|---|---|
 | Zoom | Molette | Pincement à deux doigts |
 | Déplacer la vue | Bouton du milieu | Glisser à deux doigts |
-| Supprimer (point, marquage, vibreur, barrière) | Clic droit ou `Suppr` | Appui long |
-| Changer le niveau du point sélectionné | `0` / `1` | Boutons de l'onglet Édition |
+| Poser des vibreurs / barrières | Clic gauche maintenu, glisser le long du bord | Glisser le doigt (choix « Au doigt » de l'onglet) |
+| Supprimer (point, marquage, vibreur, barrière) | Clic droit (maintenu pour les vibreurs / barrières) ou `Suppr` | Appui long |
+| Changer le niveau du point sélectionné | `0` / `1` | Boutons « Au sol » / « En hauteur » de l'onglet Édition |
 | Tourner un marquage | `R` | Boutons ⟲ ⟳ |
 | Annuler | `Ctrl+Z` | Bouton Annuler |
 | Vue 3D | Glisser = tourner, molette = zoom, clic droit = déplacer | Un doigt = tourner, deux doigts = zoom |
@@ -108,7 +111,7 @@ Tout se trouve dans l'onglet **Fichier**.
 |---|---|
 | **Projet `.json`** | Enregistrer et rouvrir la piste. Une sauvegarde automatique est faite aussi dans le navigateur. |
 | **Dossier PDF** (A4 ou A3 paysage, 4 pages) | Vue 2D cotée, vue 3D, quadrillage avec repères numérotés pour reporter la piste au sol, résumé complet (dimensions, niveaux, pieds, barrières, vibreurs, marquages, maquette). |
-| **Maquette `.3mf`** | Une seule pièce, **20 cm maximum**, prête pour Bambu Studio et les autres slicers. Les pieds, barrières et épaisseurs gardent une taille minimale imprimable. Les vibreurs et marquages ne sont pas inclus. |
+| **Maquette `.3mf`** | Une seule pièce, **20 cm maximum**, prête pour Bambu Studio et les autres slicers. **Piste seule par défaut** (le terrain autour n'est pas imprimé ; plaque sous tout le terrain en option). Les pieds, barrières et épaisseurs gardent une taille minimale imprimable. Les vibreurs et marquages ne sont pas inclus. Conseil : un bord (*brim*) de 3 à 5 mm aide la piste à tenir sur le plateau. |
 
 ---
 
@@ -120,7 +123,7 @@ Le projet est un fichier JSON lisible (version de format 3) :
 {
   "app": "piste-drift-rc",
   "version": 3,
-  "appVersion": "1.31.0",
+  "appVersion": "1.33.0",
   "params": { "espL": "12", "espW": "8", "voie": "1.2", "h2": "0.25", "pente": "10", "solCol": "#5f8f4e" },
   "strokes": [ { "ctrl": [{ "x": 2.1, "y": 3.4 }], "lev": [0], "w": 1.2, "closed": true } ],
   "marks":  [ { "type": "in", "x": 5.2, "y": 1.1, "rot": 0, "len": 1, "wid": 0.6, "label": "Entrée" } ],
@@ -138,8 +141,9 @@ Le projet est un fichier JSON lisible (version de format 3) :
 ## Compatibilité
 
 - **PC** : Chrome, Edge, Firefox, Safari (versions récentes).
-- **iPhone / iPad et Android** : interface adaptée, avec le menu en haut, une barre d'outils défilante, le zoom au pincement et l'appui long.
+- **iPhone / iPad et Android** : interface adaptée, avec le menu en haut, une barre d'outils sur plusieurs lignes (tout est visible sans glisser), le zoom au pincement et l'appui long. À ouvrir dans **Safari ou Chrome**, pas dans un aperçu de fichier.
 - **Hors ligne** : tout fonctionne sauf la vue 3D, qui a besoin de Three.js depuis le CDN jsDelivr.
+- En cas d'erreur, un **bandeau rouge** s'affiche en bas de l'écran avec le message : une capture suffit pour signaler le problème.
 
 ---
 
