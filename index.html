@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<title>Piste Drift RC 1.31.2</title>
+<title>Piste Drift RC 1.33.0</title>
 <style>
   body { font-family: system-ui, sans-serif; margin: 0; display: flex; height: 100vh; }
   #panel { width: 300px; padding: 12px; background: #f4f4f4; overflow-y: auto; box-sizing: border-box; }
@@ -100,7 +100,7 @@ window.addEventListener('error', function (e) {
 <div id="panel">
   <!-- Barre d'outils, toujours visible -->
   <div id="toolbar">
-    <div id="appTitle"><span class="name">Piste Drift RC <small>v1.31.2</small></span>
+    <div id="appTitle"><span class="name">Piste Drift RC <small>v1.33.0</small></span>
     <button id="menuToggle" style="display:none">☰ Menu ▴</button></div>
     <div class="tools" id="modeTools">
       <button id="m-draw" class="mode">✏️ Tracer</button>
@@ -181,7 +181,7 @@ window.addEventListener('error', function (e) {
   </div>
 
   <div class="tabpage" id="t-rail">
-    <div class="note">Mode <b>Barrières</b> : passe la souris (ou le doigt) le long du bord de la piste pour peindre le masque violet ; une glissière se pose sur chaque bord touché par le masque. Clic droit (ou appui long) : effacer.</div>
+    <div class="note">Mode <b>Barrières</b> : passe le pinceau le long du bord de la piste. <b>Souris : clic gauche = ajouter, clic droit = supprimer</b> (maintenir et glisser). Au doigt : selon le choix ci-dessous ; appui long = supprimer.</div>
     <div class="note"><b>Niveau 1 et rampes : glissières obligatoires des deux côtés</b>, posées automatiquement.</div>
     <label>Niveau 0 (sol)
       <select id="railMode">
@@ -191,7 +191,7 @@ window.addEventListener('error', function (e) {
         <option value="both">Automatique : des deux côtés</option>
         <option value="none">Aucune</option>
       </select></label>
-    <label>Pinceau
+    <label>Au doigt (téléphone, tablette)
       <select id="rlTool"><option value="add">Ajouter des barrières</option><option value="del">Effacer des barrières</option></select></label>
     <label>Taille du pinceau (m) <input id="rlBrush" type="number" value="0.3" min="0.05" step="0.05"></label>
     <div>
@@ -203,8 +203,8 @@ window.addEventListener('error', function (e) {
   </div>
 
   <div class="tabpage" id="t-kerb">
-    <div class="note">Mode <b>Vibreurs</b> : passe la souris (ou le doigt) sur le bord de la piste pour peindre le masque orange ; les vibreurs rouges et blancs se posent sur la piste, le long du bord, partout où le masque touche ce bord. Clic droit (ou appui long) : effacer.</div>
-    <label>Pinceau
+    <div class="note">Mode <b>Vibreurs</b> : passe le pinceau sur le bord de la piste ; les vibreurs rouges et blancs se posent sur la piste, collés au bord. <b>Souris : clic gauche = ajouter, clic droit = supprimer</b> (maintenir et glisser). Au doigt : selon le choix ci-dessous ; appui long = supprimer.</div>
+    <label>Au doigt (téléphone, tablette)
       <select id="kbTool"><option value="add">Ajouter des vibreurs</option><option value="del">Effacer des vibreurs</option></select></label>
     <label>Taille du pinceau (m) <input id="kbBrush" type="number" value="0.3" min="0.05" step="0.05"></label>
     <h3>Réglages des vibreurs</h3>
@@ -281,10 +281,15 @@ window.addEventListener('error', function (e) {
     <h3>Maquette 3D (Bambu Studio)</h3>
     <label>Plus grande dimension de la maquette (mm, 200 max) <input id="mMax" type="number" value="200" min="50" max="200" step="10"></label>
     <div id="modelInfo" class="note"></div>
-    <label>Épaisseur du socle (mm) <input id="mBase" type="number" value="2" min="0" step="0.2"></label>
-    <label class="check"><input id="mRails" type="checkbox" checked> Inclure les glissières</label>
+    <label>Terrain autour de la piste
+      <select id="mSocle">
+        <option value="none">Non imprimé : piste seule</option>
+        <option value="plate">Imprimé : plaque sous tout le terrain</option>
+      </select></label>
+    <label>Épaisseur sous la chaussée (mm) <input id="mBase" type="number" value="2" min="0" step="0.2"></label>
+    <label class="check"><input id="mRails" type="checkbox" checked> Inclure les barrières</label>
     <button id="f3mf">Exporter la maquette .3mf</button>
-    <div class="note">Une seule pièce, réduite pour tenir dans 20 × 20 cm. Les pieds, glissières et épaisseurs gardent une taille minimale imprimable. Les vibreurs et marquages ne sont pas inclus.</div>
+    <div class="note">Une seule pièce, réduite pour tenir dans 20 × 20 cm. Par défaut, seule la piste est imprimée (pas le terrain autour). Les pieds, glissières et épaisseurs gardent une taille minimale imprimable. Les vibreurs et marquages ne sont pas inclus.</div>
     <div id="fileMsg" class="note" style="color:#1a7a32;font-weight:600"></div>
   </div>
 
@@ -303,12 +308,13 @@ window.addEventListener('error', function (e) {
     <span class="dot" style="background:none;border:2px solid #ff8c00"></span>Hauteur libre insuffisante<br>
     <span class="dot" style="background:#e00"></span>Virage plus serré que le rayon min.<br>
     <span class="sq" style="background:repeating-linear-gradient(90deg,#d62828 0 4px,#fff 4px 8px);border:1px solid #bbb"></span>Vibreur
-    <span class="sq" style="background:rgba(255,140,0,.35);margin-left:8px"></span>Masque des vibreurs<br>
-    <span class="sq" style="background:rgba(150,60,220,.3)"></span>Masque des barrières (mode Barrières)
+    <br>
+    <span class="dot" style="background:none;border:2px dashed #1a9e3a"></span>Pinceau qui ajoute
+    <span class="dot" style="background:none;border:2px dashed #c0392b;margin-left:8px"></span>Pinceau qui supprime
   </div>
     <h3>À propos de Piste Drift RC</h3>
     <div id="about" style="background:#fff;border:1px solid #d3d7dd;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:#374151">
-      <div style="font-weight:700;font-size:14px;color:#111827">Piste Drift RC <span style="font-weight:400;color:#6b7280">version 1.31.2 — 17/10/2026</span></div>
+      <div style="font-weight:700;font-size:14px;color:#111827">Piste Drift RC <span style="font-weight:400;color:#6b7280">version 1.33.0 — 17/10/2026</span></div>
       Logiciel de conception de pistes de drift RC (échelle 1/10 par défaut) : tracé à la souris ou au doigt, niveaux et rampes, vibreurs, barrières, marquages, vue 3D, dossier PDF et maquette 3MF pour impression 3D.
       <div style="margin-top:8px;font-weight:700;color:#111827">Crédits</div>
       <div>Idée, conception et essais : <b>Vince</b></div>
@@ -323,8 +329,8 @@ window.addEventListener('error', function (e) {
     <b>Gomme</b> : supprimer une portion.<br>
     <b>Niveau</b> : glisser le long de la piste pour passer la portion au niveau choisi (le pinceau suit la branche, même à un croisement).<br>
     <b>Déplacer</b> : déplacer toute la piste.<br>
-    <b>Barrières</b> : peindre le masque le long du bord pour poser les glissières au sol (onglet Barrières).<br>
-    <b>Vibreurs</b> : peindre le masque sur le bord de la piste ; clic droit pour effacer (onglet Vibreurs).<br>
+    <b>Barrières</b> : clic gauche maintenu = ajouter, clic droit = supprimer, le long du bord (onglet Barrières).<br>
+    <b>Vibreurs</b> : clic gauche maintenu = ajouter, clic droit = supprimer, le long du bord de la piste (onglet Vibreurs).<br>
     <b>Niveau travaillé</b> : n'affiche et ne modifie que le niveau choisi ; l'autre est masqué et protégé.<br>
     <b>Marquage</b> : poser des points de passage, croix et couloirs d'entrée / de sortie (onglet Marquage).<br>
     <b>Vue 3D</b> : glisser pour tourner, molette pour zoomer, clic droit pour déplacer.<br>
@@ -344,7 +350,7 @@ window.addEventListener('error', function (e) {
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <script>
-const APP_VERSION = '1.31.2';                               // numéro de version affiché, enregistré et imprimé
+const APP_VERSION = '1.33.0';                               // numéro de version affiché, enregistré et imprimé
 const cv = document.getElementById('c'), ctx = cv.getContext('2d');
 const $ = id => document.getElementById(id);
 const num = id => +$(id).value || 0;
@@ -1569,7 +1575,9 @@ cv.addEventListener('wheel', e => {
 
 // ---------- Souris ----------
 cv.addEventListener('contextmenu', e => e.preventDefault());
+let lastPtr = 'mouse';
 function onDown(e) {
+  if (e.pointerType) lastPtr = e.pointerType;
   if (e.button === 1) {
     e.preventDefault();
     drag = { type: 'pan', cx: e.clientX, cy: e.clientY };
@@ -1578,7 +1586,7 @@ function onDown(e) {
   const p = world(e);
   if (e.button === 2) {
     if (mode === 'edit') deletePoint(findPoint(p));
-    if (mode === 'kerb' || mode === 'rail') { snap(); drag = { type: mode, neg: true, last: null }; kerbPaint(p); update(); return; }
+    if (mode === 'kerb' || mode === 'rail') { snap(); drag = { type: mode, neg: true, last: null }; kerbPaint(p); update(); return; }   // clic droit (ou appui long au doigt) = supprimer
     if (mode === 'mark') { const i = findMark(p); if (i >= 0) { snap(); marks.splice(i, 1); selMark = -1; syncMarkPanel(); update(); } }
     return;
   }
@@ -1600,7 +1608,11 @@ function onDown(e) {
     current = { pts: [start], join: j };
     return;
   }
-  if (mode === 'kerb' || mode === 'rail') { snap(); drag = { type: mode, neg: $(mode === 'kerb' ? 'kbTool' : 'rlTool').value === 'del', last: null }; kerbPaint(p); update(); return; }
+  if (mode === 'kerb' || mode === 'rail') {
+    // souris : clic gauche = ajouter ; doigt ou stylet : selon le choix « Au doigt » de l'onglet
+    const neg = e.pointerType === 'mouse' ? false : $(mode === 'kerb' ? 'kbTool' : 'rlTool').value === 'del';
+    snap(); drag = { type: mode, neg, last: null }; kerbPaint(p); update(); return;
+  }
   if (mode === 'move') { snap(); drag = { type: 'move', last: p }; return; }
   if (mode === 'level') { snap(); drag = { type: 'level' }; paintStart(p); update(); return; }
   if (mode === 'edit') {
@@ -1727,7 +1739,7 @@ cv.addEventListener('pointerdown', e => {
       return;
     }
     gestureHist = history.length;
-    const ev = { button: 2, clientX: e.clientX, clientY: e.clientY, preventDefault() {} };
+    const ev = { button: 2, longPress: true, clientX: e.clientX, clientY: e.clientY, preventDefault() {} };
     longPress = { x: e.clientX, y: e.clientY, t: setTimeout(() => { longPress = null; cancelGesture(); onDown(ev); }, 650) };
   }
   onDown(e);
@@ -1832,7 +1844,7 @@ window.addEventListener('resize', () => {
 // ===================================================================
 // ---------- Fichiers : sauvegarde du projet, plan PDF, maquette 3MF ----------
 // ===================================================================
-const PARAM_IDS = ['solCol', 'rfil', 'rlBrush', 'espL', 'espW', 'voie', 'rmin', 'lissage', 'railMode', 'echelle', 'h2', 'pente', 'clear', 'pSp', 'pSec', 'gomme', 'kbBrush', 'kbW', 'kbL', 'kbH', 'kbBev', 'kbAng', 'mMax'];
+const PARAM_IDS = ['mSocle', 'solCol', 'rfil', 'rlBrush', 'espL', 'espW', 'voie', 'rmin', 'lissage', 'railMode', 'echelle', 'h2', 'pente', 'clear', 'pSp', 'pSec', 'gomme', 'kbBrush', 'kbW', 'kbL', 'kbH', 'kbBev', 'kbAng', 'mMax'];
 const stamp = () => new Date().toISOString().slice(0, 10);
 function projectData() {
   const params = {};
@@ -2334,7 +2346,8 @@ function buildPDF() {
       ['Maquette 3D', MS ? [
         ['Mode', `une seule pièce, ${modelMax()} mm max.`],
         ['Taille', `${fr(MS.w * MS.S, 0)} × ${fr(MS.h * MS.S, 0)} mm${MS.fit ? `, échelle ≈ 1/${Math.round(1000 / MS.S)}` : `, ${MS.tg.nx * MS.tg.ny} tuile(s)`}`],
-        ['Socle', `${fr(num('mBase'), 1)} mm`]] : [['Maquette', '—']]]
+        ['Terrain', $('mSocle').value === 'plate' ? `plaque de ${fr(num('mBase'), 1)} mm sous tout le terrain` : 'non imprimé (piste seule)'],
+        ['Épaisseur de la chaussée', `${fr(num('mBase') + ROAD_MM, 1)} mm`]] : [['Maquette', '—']]]
     ];
     // colonne gauche : caractéristiques
     let y = PH - 84;
@@ -2431,6 +2444,8 @@ function buildModel() {
   const tg = MS.tg, S = MS.S;                                 // mètres réels → mm de maquette
   const baseMM = Math.max(0, num('mBase'));
   const withRails = $('mRails').checked;
+  const plate = $('mSocle').value === 'plate';               // plaque sous le terrain, ou piste seule
+  const floor = plate ? baseMM : 0;                          // dessous de la chaussée au sol / des pieds / des barrières
   const meshes = [];
   for (let i = 0; i < tg.nx; i++) for (let j = 0; j < tg.ny; j++) meshes.push({ i, j, V: [], T: [] });
   const meshAt = (i, j) => meshes[i * tg.ny + j];
@@ -2449,7 +2464,7 @@ function buildModel() {
     }
   }
   // socle de chaque tuile
-  if (baseMM > 0) for (const m of meshes) {
+  if (plate && baseMM > 0) for (const m of meshes) {
     const xa = tg.x0 + m.i * tg.tm, xb = Math.min(tg.x1, xa + tg.tm), ya = tg.y0 + m.j * tg.tm, yb = Math.min(tg.y1, ya + tg.tm);
     const w = (xb - xa) * S, h = (yb - ya) * S;
     addPrism(m, [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }].map(p => ({ ...p, zt: baseMM, zb: 0 })));
@@ -2457,7 +2472,7 @@ function buildModel() {
   const deckMM = Math.max(ROAD_MM, DECK * S, 1.2);             // épaisseur du tablier, 1,2 mm minimum
   const railMM = Math.max(RAIL_TOP * S, 2);                     // hauteur de glissière, 2 mm minimum
   const top = z => baseMM + ROAD_MM + z * S;
-  const bottom = z => z > Z_EPS ? Math.max(baseMM, top(z) - deckMM) : baseMM;
+  const bottom = z => z > Z_EPS ? Math.max(floor, top(z) - deckMM) : floor;
   for (const s of strokes) {
     const c = s.curve, n = c.length;
     if (n < 2) continue;
@@ -2474,7 +2489,7 @@ function buildModel() {
         const f = side > 0 ? s.railL : s.railR, rp = side > 0 ? s.railPL : s.railPR;
         if (!f[a] || !f[b]) continue;
         const R = (j, sg) => ({ x: rp[j].x + s.nrm[j].x * hw * sg, y: rp[j].y + s.nrm[j].y * hw * sg,
-          zt: baseMM + ROAD_MM + c[j].z * S + railMM, zb: baseMM + c[j].z * S });
+          zt: baseMM + ROAD_MM + c[j].z * S + railMM, zb: floor + c[j].z * S });
         addPiece([R(a, 1), R(b, 1), R(b, -1), R(a, -1)]);   // glissière (paroi pleine)
       }
     }
@@ -2485,7 +2500,7 @@ function buildModel() {
     if (!withRails || !f.rail) continue;
     const hw = RAIL_WALL_MM / S / 2, rp = f.railPts;
     for (let k = 0; k < rp.length - 1; k++) {
-      const Rr = (q, sg) => ({ x: q.x + q.nx * hw * sg, y: q.y + q.ny * hw * sg, zt: baseMM + ROAD_MM + f.z * S + railMM, zb: baseMM + f.z * S });
+      const Rr = (q, sg) => ({ x: q.x + q.nx * hw * sg, y: q.y + q.ny * hw * sg, zt: baseMM + ROAD_MM + f.z * S + railMM, zb: floor + f.z * S });
       addPiece([Rr(rp[k], 1), Rr(rp[k + 1], 1), Rr(rp[k + 1], -1), Rr(rp[k], -1)]);
     }
   }
@@ -2493,7 +2508,7 @@ function buildModel() {
   const ph = Math.max(Math.max(0.01, num('pSec')) * S, 2) / S / 2;   // pied : 2 mm minimum
   for (const p of pillars) {
     const zt = baseMM + ROAD_MM + p.h * S + DECK * S - deckMM;          // sous le tablier
-    addPiece([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({ x: p.x + u * ph, y: p.y + v * ph, zt, zb: baseMM })));
+    addPiece([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({ x: p.x + u * ph, y: p.y + v * ph, zt, zb: floor })));
   }
   return { tg, S, meshes, fit: MS.fit };
 }
@@ -2734,22 +2749,12 @@ function drawKerbStrips(keep, ghost) {
 }
 // Masque du pinceau (vibreurs / barrières) et cercle du pinceau : par-dessus tout
 function drawKerbOverlay(wl) {
-  if (mode === 'kerb' || mode === 'rail') {
-    // masque : union des tampons positifs (orange / bleu), dessiné sous les vibreurs
-    const pos = (mode === 'rail' ? railMask : kerbMask).filter(k => !k.neg && (wl === 'all' || k.lv === 'all' || k.lv === wl));
-    if (pos.length) {
-      ctx.beginPath();
-      for (const k of pos) { const C = P(k); ctx.moveTo(C.x + k.r * view.scale, C.y); ctx.arc(C.x, C.y, k.r * view.scale, 0, Math.PI * 2); }
-      ctx.fillStyle = mode === 'rail' ? 'rgba(150,60,220,0.22)' : 'rgba(255,140,0,0.25)';
-      ctx.fill('nonzero');
-    }
-  }
-  if (mode !== 'kerb' && mode !== 'rail') return;
-  if (kbHover) {
-    const C = P(kbHover), del = $(mode === 'rail' ? 'rlTool' : 'kbTool').value === 'del' || (drag && drag.neg);
-    ctx.setLineDash([5, 4]); ctx.strokeStyle = del ? '#c0392b' : '#e85d04'; ctx.lineWidth = 1.5;
-    ctx.beginPath(); ctx.arc(C.x, C.y, (mode === 'rail' ? rlBrush() : kbBrush()) * view.scale, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
-  }
+  // le masque n'est plus affiché : on ne voit que le résultat (vibreurs / barrières) et le cercle du pinceau
+  if ((mode !== 'kerb' && mode !== 'rail') || !kbHover) return;
+  const C = P(kbHover), del = drag ? drag.neg : (lastPtr === 'mouse' ? null : $(mode === 'rail' ? 'rlTool' : 'kbTool').value === 'del');
+  ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+  ctx.strokeStyle = del === true ? '#c0392b' : del === false ? '#1a9e3a' : '#e85d04';   // rouge = supprime, vert = ajoute
+  ctx.beginPath(); ctx.arc(C.x, C.y, (mode === 'rail' ? rlBrush() : kbBrush()) * view.scale, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
 }
 // Relief : épaisseur réglée côté bord, pente jusqu'à 1 mm côté intérieur, biseau arrondi au début et à la fin
 function kerbs3D(group) {
