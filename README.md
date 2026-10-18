@@ -5,7 +5,7 @@ On indique les dimensions de l'espace et la largeur de voie, on dessine la piste
 
 ![Version](https://img.shields.io/badge/version-1.31.0-1f2937)
 ![HTML](https://img.shields.io/badge/HTML%20%2F%20JavaScript-un%20seul%20fichier-e85d04)
-![Plateformes](https://img.shields.io/badge/PC%20%7C%Android-compatible-5f8f4e)
+![Plateformes](https://img.shields.io/badge/PC-compatible-5f8f4e)
 ![Échelle](https://img.shields.io/badge/%C3%A9chelle-1%2F10-d62828)
 
 > 📖 Captures d'écran et guide illustré : voir le **Wiki** du dépôt.
