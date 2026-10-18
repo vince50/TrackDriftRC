@@ -3,7 +3,7 @@
 **Logiciel de conception de pistes de drift RC**, dans un seul fichier HTML, sans installation.
 On indique les dimensions de l'espace et la largeur de voie, on dessine la piste d'un trait à la souris (ou au doigt), et le logiciel calcule une piste propre : courbes lissées, niveaux et rampes, vibreurs, barrières, marquages, vue 3D, dossier PDF et maquette imprimable en 3D.
 
-![Version](https://img.shields.io/badge/version-1.31.0-1f2937)
+![Version](https://img.shields.io/badge/version-1.31.2-1f2937)
 ![HTML](https://img.shields.io/badge/HTML%20%2F%20JavaScript-un%20seul%20fichier-e85d04)
 ![Plateformes](https://img.shields.io/badge/PC-compatible-5f8f4e)
 ![Échelle](https://img.shields.io/badge/%C3%A9chelle-1%2F10-d62828)
