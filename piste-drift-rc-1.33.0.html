@@ -1,0 +1,3103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Piste Drift RC 1.33.0</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; display: flex; height: 100vh; }
+  #panel { width: 300px; padding: 12px; background: #f4f4f4; overflow-y: auto; box-sizing: border-box; }
+  #panel h3 { margin: 14px 0 4px; font-size: 15px; }
+  #panel label { display: block; margin-top: 6px; font-size: 13px; }
+  #panel input[type=number], #panel select { width: 100%; padding: 4px; box-sizing: border-box; }
+  /* boutons : style explicite, identique sur tous les navigateurs (iOS n'applique plus ses pilules bleues) */
+  #panel button, #close3d { -webkit-appearance: none; appearance: none; font: inherit; font-size: 13px; color: #1f2937;
+    background: #fff; border: 1px solid #c9ced6; border-radius: 7px; margin: 6px 4px 0 0; padding: 6px 10px; cursor: pointer;
+    line-height: 1.2; -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+  #panel input, #panel select, #panel label { touch-action: manipulation; }
+  #panel button:active { background: #e8ebef; }
+  #panel button:disabled { opacity: .4; cursor: not-allowed; }
+  #panel button.active { background: #1f2937; color: #fff; border-color: #1f2937; }
+  #panel input[type=number], #panel input[type=text], #panel select { -webkit-appearance: none; appearance: none; background: #fff;
+    border: 1px solid #c9ced6; border-radius: 6px; color: #1f2937; font: inherit; }
+  #panel select { background-image: linear-gradient(45deg, transparent 50%, #555 50%), linear-gradient(135deg, #555 50%, transparent 50%);
+    background-position: calc(100% - 14px) 50%, calc(100% - 9px) 50%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 24px; }
+  #panel input[type=checkbox] { accent-color: #1f2937; }
+  .note { font-size: 12px; color: #666; margin-top: 4px; }
+  #help { margin-top: 10px; font-size: 12px; color: #555; line-height: 1.5; }
+  #legend { margin-top: 10px; font-size: 12px; line-height: 1.9; }
+  .dot { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: middle; box-sizing: border-box; }
+  .sq { display: inline-block; width: 14px; height: 9px; margin-right: 6px; vertical-align: middle; }
+  #info { margin-top: 12px; font-size: 13px; line-height: 1.6; }
+  #main { flex: 1; position: relative; overflow: hidden; }
+  canvas { width: 100%; height: 100%; display: block; background: #fff; }
+  #v3d { display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 5; background: #dfe6ee; }
+  #v3d canvas { width: 100%; height: 100%; }
+  #close3d { position: absolute; top: 10px; right: 10px; z-index: 6; padding: 6px 10px; cursor: pointer; }
+  #toolbar { position: sticky; top: -12px; background: #f4f4f4; padding: 12px 0 0; margin-top: -12px; z-index: 2; }
+  #toolbar .tools { display: flex; flex-wrap: wrap; align-items: center; }
+  #toolbar .sep { flex-basis: 100%; height: 0; }
+  #panel button.act { background: #eef0f3; border-color: #dfe3e8; color: #374151; }
+  #tabs { display: flex; flex-wrap: wrap; gap: 3px; margin: 10px 0 0; padding-bottom: 0; border-bottom: 2px solid #1f2937; }
+  #panel #tabs .tab { flex: 1 1 22%; margin: 0; padding: 6px 2px; border: 1px solid #d3d7dd; border-bottom: none; border-radius: 6px 6px 0 0;
+    background: #e9ecef; color: #4b5563; font-size: 12.5px; font-weight: 600; }
+  #panel #tabs .tab.active { background: #1f2937; color: #fff; border-color: #1f2937; }
+  .tabpage { display: none; padding-top: 4px; }
+  .tabpage.active { display: block; }
+  #panel label.check { display: flex; align-items: center; gap: 6px; }
+  #panel button.danger { color: #b00; }
+  .infotitle { border-top: 1px solid #ddd; padding-top: 10px; }
+  canvas#c { touch-action: none; -webkit-user-select: none; user-select: none; }
+  #appTitle { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 700; margin-bottom: 2px; color: #111827; }
+  #appTitle small { font-weight: 400; color: #8a8f98; font-size: 11px; margin-left: 4px; }
+  #panel #menuToggle { margin: 0; padding: 6px 12px; background: #e85d04; border-color: #e85d04; color: #fff; font-weight: 700; font-size: 13px; }
+  /* écrans tactiles : cibles plus grandes */
+  @media (pointer: coarse) {
+    #panel button { padding: 8px 11px; font-size: 14px; }
+    #panel input[type=number], #panel select { padding: 7px; font-size: 16px; }   /* 16 px : évite le zoom auto d'iOS */
+    #panel input[type=text] { font-size: 16px; }
+  }
+  /* téléphone : le menu en haut, le plan en dessous */
+  @media (max-width: 820px) {
+    body { flex-direction: column; height: 100dvh; }
+    #panel { order: 1; width: 100%; flex: 0 0 45%; padding: calc(6px + env(safe-area-inset-top)) 10px 8px; border-bottom: 1px solid #c9ced6;
+      box-shadow: 0 2px 6px rgba(0,0,0,.08); position: relative; z-index: 3; }
+    #main { order: 2; flex: 1 1 55%; min-height: 0; padding-bottom: env(safe-area-inset-bottom); }
+    #toolbar { top: calc(-6px - env(safe-area-inset-top)); margin: calc(-6px - env(safe-area-inset-top)) -10px 0; padding: calc(6px + env(safe-area-inset-top)) 10px 0; }
+    /* une seule ligne d'outils, défilable au doigt */
+    #toolbar .tools { flex-wrap: wrap; overflow: visible; margin: 0; padding: 0 0 2px; }
+    #toolbar .tools::-webkit-scrollbar, #tabs::-webkit-scrollbar { display: none; }
+    #toolbar .sep { display: none; }
+    #panel #toolbar .tools button { flex: 1 1 auto; white-space: nowrap; padding: 7px 6px; font-size: 13px; margin: 4px 4px 0 0; }
+    /* onglets : une ligne, défilable, l'onglet actif toujours visible */
+    #tabs { flex-wrap: wrap; overflow: visible; margin: 8px 0 0; padding: 0; gap: 2px; }
+    #panel #tabs .tab { flex: 1 0 auto; padding: 8px 10px; font-size: 13px; }
+    #panel.collapsed { flex-basis: auto; overflow: hidden; }
+    #panel.collapsed > :not(#toolbar), #panel.collapsed #tabs { display: none; }
+    #panel.collapsed #toolbar { padding-bottom: 4px; }
+    #menuToggle { display: inline-block !important; }
+  }
+</style>
+</head>
+<body>
+<div id="noJs" style="position:fixed;left:0;right:0;top:0;z-index:100;background:#e85d04;color:#fff;font:15px/1.4 system-ui,sans-serif;padding:14px 16px calc(14px + env(safe-area-inset-top));box-shadow:0 2px 8px rgba(0,0,0,.25)">
+  <b>⚠ Aperçu seulement : les boutons ne fonctionnent pas ici.</b><br>
+  Cette fenêtre (aperçu WhatsApp, Mail, Fichiers…) bloque le programme. Ouvre le fichier dans un navigateur :
+  <b>Safari</b> ou <b>Chrome</b> — ou utilise le lien web de l'application.
+</div>
+<script>document.getElementById('noJs').style.display = 'none';</script>
+<div id="errBar" style="display:none;position:fixed;left:0;right:0;bottom:0;z-index:99;background:#c0392b;color:#fff;font:13px system-ui,sans-serif;padding:8px 12px calc(8px + env(safe-area-inset-bottom))"></div>
+<script>
+// Toute erreur JavaScript s'affiche en bas de l'écran (utile pour signaler un problème depuis un téléphone)
+window.addEventListener('error', function (e) {
+  var b = document.getElementById('errBar'); if (!b) return;
+  b.style.display = 'block';
+  b.textContent = '⚠ Erreur : ' + (e.message || 'inconnue') + (e.lineno ? ' (ligne ' + e.lineno + ')' : '') + ' — fais une capture et envoie-la.';
+});
+</script>
+<div id="panel">
+  <!-- Barre d'outils, toujours visible -->
+  <div id="toolbar">
+    <div id="appTitle"><span class="name">Piste Drift RC <small>v1.33.0</small></span>
+    <button id="menuToggle" style="display:none">☰ Menu ▴</button></div>
+    <div class="tools" id="modeTools">
+      <button id="m-draw" class="mode">✏️ Tracer</button>
+      <button id="m-edit" class="mode">✋ Éditer</button>
+      <button id="m-level" class="mode">⛰️ Niveau</button>
+      <button id="m-move" class="mode">✥ Déplacer</button>
+      <button id="m-rail" class="mode">🚧 Barrières</button>
+      <button id="m-kerb" class="mode">🟥 Vibreurs</button>
+      <button id="m-mark" class="mode">◯ Marquage</button>
+      <span class="sep"></span>
+      <button id="undo" class="act">↶ Annuler</button>
+      <button id="fit" class="act">⤢ Recentrer</button>
+      <button id="view3d" class="act">🧊 Vue 3D</button>
+    </div>
+    <!-- Onglets -->
+    <div id="tabs">
+      <button class="tab" data-tab="t-file">Fichier</button>
+      <button class="tab active" data-tab="t-edit">Édition</button>
+      <button class="tab" data-tab="t-track">Piste</button>
+      <button class="tab" data-tab="t-rail">Barrières</button>
+      <button class="tab" data-tab="t-kerb">Vibreurs</button>
+      <button class="tab" data-tab="t-levels">Niveaux</button>
+      <button class="tab" data-tab="t-mark">Marquage</button>
+      <button class="tab" data-tab="t-help">Aide</button>
+    </div>
+  </div>
+
+  <div class="tabpage active" id="t-edit">
+    <h3>Gomme</h3>
+    <button id="m-erase" class="mode">Gomme</button>
+    <label>Taille de la gomme / du pinceau (m) <input id="gomme" type="number" value="0.4" step="0.1"></label>
+    <h3>Affichage</h3>
+    <label>Niveau travaillé
+      <select id="workLev">
+        <option value="all">Tous les niveaux</option>
+        <option value="0">Niveau 0 seul (niveau 1 masqué)</option>
+        <option value="1">Niveau 1 seul (niveau 0 masqué)</option>
+      </select></label>
+    <label class="check"><input id="ghost" type="checkbox"> Montrer le niveau masqué en transparence</label>
+    <h3>Point sélectionné</h3>
+    <div id="ptHint" class="note" style="margin-bottom:2px"></div>
+    <div>
+      <button id="lev1" title="Ce point repasse au sol">Au sol (niveau 0)</button>
+      <button id="lev2" title="Ce point monte au niveau 1 (pont) ; les rampes se calculent seules">En hauteur (niveau 1)</button>
+      <button id="delPt" class="danger" title="Supprime ce point du tracé">Supprimer le point</button>
+    </div>
+    <h3>Tracé sélectionné</h3>
+    <div>
+      <button id="applyW">Appliquer la largeur</button>
+      <button id="relax">Relisser</button>
+      <button id="loop">Boucler / ouvrir</button>
+    </div>
+    <h3>Tout</h3>
+    <button id="clear-all" class="danger">Effacer toute la piste</button>
+  </div>
+
+  <div class="tabpage" id="t-track">
+    <h3>Espace disponible</h3>
+    <label>Longueur (m) <input id="espL" type="number" value="12" step="0.5"></label>
+    <label>Largeur (m) <input id="espW" type="number" value="8" step="0.5"></label>
+    <h3>Voie</h3>
+    <label>Largeur pour les <b>nouveaux</b> tracés (m) <input id="voie" type="number" value="1.2" step="0.1"></label>
+    <label>Rayon min. de virage (m) <input id="rmin" type="number" value="1.5" step="0.1"></label>
+    <label>Lissage (0 = aucun, 1 = fort) <input id="lissage" type="number" value="0.5" min="0" max="1" step="0.1"></label>
+    <label>Rayon des raccords entre tracés (m, 0 = aucun) <input id="rfil" type="number" value="0.5" min="0" step="0.1"></label>
+    <h3>Sol autour de la piste</h3>
+    <label class="check">Couleur du sol <input id="solCol" type="color" value="#eeeeea" style="width:56px;height:32px;padding:0;border:1px solid #c9ced6;border-radius:6px;background:none"></label>
+    <div>
+      <button class="solPre" data-c="#eeeeea">Clair</button>
+      <button class="solPre" data-c="#5f8f4e">Gazon</button>
+      <button class="solPre" data-c="#9a9a96">Béton</button>
+      <button class="solPre" data-c="#2b4a7a">Moquette bleue</button>
+      <button class="solPre" data-c="#5a3b2a">Parquet</button>
+    </div>
+    <div class="note">Visible sur le plan 2D et dans la vue 3D.</div>
+    <h3>Maquette</h3>
+    <label>Échelle 1/ <input id="echelle" type="number" value="10" step="1"></label>
+  </div>
+
+  <div class="tabpage" id="t-rail">
+    <div class="note">Mode <b>Barrières</b> : passe le pinceau le long du bord de la piste. <b>Souris : clic gauche = ajouter, clic droit = supprimer</b> (maintenir et glisser). Au doigt : selon le choix ci-dessous ; appui long = supprimer.</div>
+    <div class="note"><b>Niveau 1 et rampes : glissières obligatoires des deux côtés</b>, posées automatiquement.</div>
+    <label>Niveau 0 (sol)
+      <select id="railMode">
+        <option value="manual">Placées à la main (pinceau)</option>
+        <option value="turns">Automatique : extérieur des virages</option>
+        <option value="ext">Automatique : extérieur de la boucle</option>
+        <option value="both">Automatique : des deux côtés</option>
+        <option value="none">Aucune</option>
+      </select></label>
+    <label>Au doigt (téléphone, tablette)
+      <select id="rlTool"><option value="add">Ajouter des barrières</option><option value="del">Effacer des barrières</option></select></label>
+    <label>Taille du pinceau (m) <input id="rlBrush" type="number" value="0.3" min="0.05" step="0.05"></label>
+    <div>
+      <button id="rlFillTurns">Pré-remplir : extérieur des virages</button>
+      <button id="rlFillBoth">Pré-remplir : des deux côtés</button>
+    </div>
+    <div id="rlInfo" class="note"></div>
+    <button id="rlClear" class="danger">Effacer toutes les barrières du sol</button>
+  </div>
+
+  <div class="tabpage" id="t-kerb">
+    <div class="note">Mode <b>Vibreurs</b> : passe le pinceau sur le bord de la piste ; les vibreurs rouges et blancs se posent sur la piste, collés au bord. <b>Souris : clic gauche = ajouter, clic droit = supprimer</b> (maintenir et glisser). Au doigt : selon le choix ci-dessous ; appui long = supprimer.</div>
+    <label>Au doigt (téléphone, tablette)
+      <select id="kbTool"><option value="add">Ajouter des vibreurs</option><option value="del">Effacer des vibreurs</option></select></label>
+    <label>Taille du pinceau (m) <input id="kbBrush" type="number" value="0.3" min="0.05" step="0.05"></label>
+    <h3>Réglages des vibreurs</h3>
+    <label>Largeur (m) <input id="kbW" type="number" value="0.08" min="0.01" step="0.01"></label>
+    <label>Longueur d'une bande rouge / blanche (m) <input id="kbL" type="number" value="0.1" min="0.02" step="0.01"></label>
+    <label>Épaisseur côté bord (mm) <input id="kbH" type="number" value="4" min="0" step="0.5"></label>
+    <label>Angle des extrémités (°, 90 = coupe droite) <input id="kbAng" type="number" value="30" min="5" max="90" step="5"></label>
+    <label>Longueur du biseau début / fin (m) <input id="kbBev" type="number" value="0.15" min="0" step="0.05"></label>
+    <div class="note">Profil : l'épaisseur indiquée au bord de la piste, en pente jusqu'à 1 mm vers l'intérieur ; extrémités coupées en biais (angle réglable) et biseau arrondi en hauteur.</div>
+    <div class="note">Les réglages s'appliquent à tous les vibreurs. Le masque tient compte du niveau travaillé (onglet Édition) : en « Niveau 1 seul », on ne peint que sur le niveau 1.</div>
+    <div id="kbInfo" class="note"></div>
+    <button id="kbClear" class="danger">Effacer tous les vibreurs</button>
+  </div>
+
+  <div class="tabpage" id="t-levels">
+    <label>Niveau des nouveaux tracés
+      <select id="drawLev"><option value="0">Niveau 0 (sol)</option><option value="1">Niveau 1</option></select></label>
+    <label>Le pinceau « Niveau » applique
+      <select id="paintLev"><option value="1">Niveau 1</option><option value="0">Niveau 0</option></select></label>
+    <h3>Niveau 1</h3>
+    <label>Hauteur (m) <input id="h2" type="number" value="0.25" step="0.01"></label>
+    <label>Angle de pente des rampes (°) <input id="pente" type="number" value="10" min="1" max="45" step="1"></label>
+    <label>Hauteur libre min. dessous (m) <input id="clear" type="number" value="0.15" step="0.01"></label>
+    <h3>Pieds</h3>
+    <label>Espacement (m) <input id="pSp" type="number" value="0.5" step="0.05"></label>
+    <label>Section (m) <input id="pSec" type="number" value="0.04" step="0.01"></label>
+  </div>
+
+  <div class="tabpage" id="t-mark">
+    <label>Type de marquage à poser
+      <select id="mkType">
+        <option value="point">Point de passage</option>
+        <option value="cross">Croix</option>
+        <option value="in">Couloir d'entrée</option>
+        <option value="out">Couloir de sortie</option>
+      </select></label>
+    <label class="check"><input id="mkLink" type="checkbox" checked> Relier chaque entrée à sa sortie en suivant la courbe</label>
+    <label>Liaison
+      <select id="mkLinkStyle">
+        <option value="one">Un trait (limite de zone, côté intérieur du couloir)</option>
+        <option value="two">Deux traits (couloir continu)</option>
+      </select></label>
+    <h3>Tailles</h3>
+    <label>Diamètre d'un point (m) <input id="mkPoint" type="number" value="0.15" step="0.05"></label>
+    <label>Taille d'une croix (m) <input id="mkCross" type="number" value="0.3" step="0.05"></label>
+    <label>Longueur d'un couloir (m) <input id="mkLen" type="number" value="1" step="0.1"></label>
+    <label>Largeur d'un couloir (m) <input id="mkWid" type="number" value="0.6" step="0.05"></label>
+    <div id="mkSel" style="display:none">
+      <h3>Sélection : <span id="mkSelName"></span></h3>
+      <label>Étiquette <input id="mkLabel" type="text" style="width:100%;padding:4px;box-sizing:border-box"></label>
+      <div>
+        <button id="mkRotL">⟲ 15°</button>
+        <button id="mkRotR">⟳ 15°</button>
+        <button id="mkFlip">Inverser le sens</button>
+      </div>
+      <button id="mkDel" class="danger">Supprimer ce marquage</button>
+    </div>
+    <div class="note">Mode <b>Marquage</b> : clic sur la piste pour poser, glisser pour déplacer, clic droit ou Suppr pour supprimer, touche R pour tourner. L'orientation suit la piste.</div>
+    <div id="mkMsg" class="note" style="color:#c0392b;font-weight:600"></div>
+  </div>
+
+  <div class="tabpage" id="t-file">
+    <h3>Projet</h3>
+    <div>
+      <button id="fSave">Enregistrer (.json)</button>
+      <button id="fOpen">Ouvrir…</button>
+      <input id="fOpenInput" type="file" accept=".json,application/json" style="display:none">
+    </div>
+    <div class="note">La piste est aussi gardée automatiquement dans le navigateur et revient à la réouverture.</div>
+    <h3>Dossier PDF (vue 2D cotée, vue 3D, quadrillage, résumé)</h3>
+    <label>Format
+      <select id="pdfFmt"><option value="A4">A4 paysage</option><option value="A3">A3 paysage</option></select></label>
+    <button id="fPdf">Exporter le dossier PDF</button>
+    <h3>Maquette 3D (Bambu Studio)</h3>
+    <label>Plus grande dimension de la maquette (mm, 200 max) <input id="mMax" type="number" value="200" min="50" max="200" step="10"></label>
+    <div id="modelInfo" class="note"></div>
+    <label>Terrain autour de la piste
+      <select id="mSocle">
+        <option value="none">Non imprimé : piste seule</option>
+        <option value="plate">Imprimé : plaque sous tout le terrain</option>
+      </select></label>
+    <label>Épaisseur sous la chaussée (mm) <input id="mBase" type="number" value="2" min="0" step="0.2"></label>
+    <label class="check"><input id="mRails" type="checkbox" checked> Inclure les barrières</label>
+    <button id="f3mf">Exporter la maquette .3mf</button>
+    <div class="note">Une seule pièce, réduite pour tenir dans 20 × 20 cm. Par défaut, seule la piste est imprimée (pas le terrain autour). Les pieds, glissières et épaisseurs gardent une taille minimale imprimable. Les vibreurs et marquages ne sont pas inclus.</div>
+    <div id="fileMsg" class="note" style="color:#1a7a32;font-weight:600"></div>
+  </div>
+
+  <div class="tabpage" id="t-help">
+    <h3>Légende</h3>
+    <div id="legend">
+    <span class="sq" style="background:#444"></span>Voie niveau 0
+    <span class="sq" style="background:#24527f;margin-left:8px"></span>Voie niveau 1<br>
+    <span class="sq" style="background:linear-gradient(90deg,#444,#24527f)"></span>Rampe
+    <span class="sq" style="background:#a9b0b7;height:3px;margin-left:8px"></span>Barrière pleine<br>
+    <span class="dot" style="background:#fff;border:1.5px solid #1e6fff"></span>Point niveau 0
+    <span class="dot" style="background:#8fb8ff;border:1.5px solid #1e6fff;margin-left:8px"></span>Point niveau 1<br>
+    <span class="dot" style="background:#1e6fff"></span>Point sélectionné<br>
+    <span class="dot" style="background:none;border:2px solid #1a9e3a"></span>Extrémité raccordable (mode Tracer)<br>
+    <span class="sq" style="background:#8a8a84;width:9px"></span>Pied du niveau 1<br>
+    <span class="dot" style="background:none;border:2px solid #ff8c00"></span>Hauteur libre insuffisante<br>
+    <span class="dot" style="background:#e00"></span>Virage plus serré que le rayon min.<br>
+    <span class="sq" style="background:repeating-linear-gradient(90deg,#d62828 0 4px,#fff 4px 8px);border:1px solid #bbb"></span>Vibreur
+    <br>
+    <span class="dot" style="background:none;border:2px dashed #1a9e3a"></span>Pinceau qui ajoute
+    <span class="dot" style="background:none;border:2px dashed #c0392b;margin-left:8px"></span>Pinceau qui supprime
+  </div>
+    <h3>À propos de Piste Drift RC</h3>
+    <div id="about" style="background:#fff;border:1px solid #d3d7dd;border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:#374151">
+      <div style="font-weight:700;font-size:14px;color:#111827">Piste Drift RC <span style="font-weight:400;color:#6b7280">version 1.33.0 — 17/10/2026</span></div>
+      Logiciel de conception de pistes de drift RC (échelle 1/10 par défaut) : tracé à la souris ou au doigt, niveaux et rampes, vibreurs, barrières, marquages, vue 3D, dossier PDF et maquette 3MF pour impression 3D.
+      <div style="margin-top:8px;font-weight:700;color:#111827">Crédits</div>
+      <div>Idée, conception et essais : <b>Vince</b></div>
+      <div>Avec le club <b>RC DRIVERS 50</b></div>
+      <div style="margin-top:8px;color:#6b7280">Compatible PC, iPhone/iPad et Android (navigateur récent). Vue 3D : Three.js.</div>
+    </div>
+    <h3>Commandes</h3>
+    <div id="help">
+    <b>Molette</b> : zoom. <b>Bouton du milieu</b> : déplacer la vue.<br>
+    <b>Tracer</b> : trait à la souris. Commencer sur une extrémité verte prolonge ce tracé ; finir près du point de départ <b>boucle la piste</b> ; finir sur l'extrémité d'un autre tracé les raccorde.<br>
+    <b>Éditer</b> : glisser un point ; cliquer sur la courbe pour ajouter un point ; clic droit ou Suppr pour supprimer ; touches <b>0</b> / <b>1</b> (ou les boutons « Au sol » / « En hauteur » de l'onglet Édition) pour poser le point au sol ou au niveau 1.<br>
+    <b>Gomme</b> : supprimer une portion.<br>
+    <b>Niveau</b> : glisser le long de la piste pour passer la portion au niveau choisi (le pinceau suit la branche, même à un croisement).<br>
+    <b>Déplacer</b> : déplacer toute la piste.<br>
+    <b>Barrières</b> : clic gauche maintenu = ajouter, clic droit = supprimer, le long du bord (onglet Barrières).<br>
+    <b>Vibreurs</b> : clic gauche maintenu = ajouter, clic droit = supprimer, le long du bord de la piste (onglet Vibreurs).<br>
+    <b>Niveau travaillé</b> : n'affiche et ne modifie que le niveau choisi ; l'autre est masqué et protégé.<br>
+    <b>Marquage</b> : poser des points de passage, croix et couloirs d'entrée / de sortie (onglet Marquage).<br>
+    <b>Vue 3D</b> : glisser pour tourner, molette pour zoomer, clic droit pour déplacer.<br>
+    <b>Ctrl+Z</b> : annuler.<br>
+    <b>Téléphone / tablette</b> : un doigt = souris ; deux doigts = zoom et déplacement de la vue ; appui long = supprimer (point, marquage, vibreur, barrière) ; « Menu » replie le panneau.
+  </div>
+  </div>
+
+  <h3 class="infotitle">Récapitulatif</h3>
+  <div id="info"></div>
+</div>
+<div id="main">
+  <canvas id="c"></canvas>
+  <div id="v3d"><button id="close3d">Retour 2D</button></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script>
+const APP_VERSION = '1.33.0';                               // numéro de version affiché, enregistré et imprimé
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+const num = id => +$(id).value || 0;
+
+const TILE_MM = 240;
+const DECK = 0.02;                          // épaisseur du tablier du niveau 1 (m)
+const Z_EPS = 0.005;                        // en dessous : considéré au sol
+const RAIL_BOT = 0.044, RAIL_TOP = 0.075;   // lisse de glissière type armco, échelle 1/10 (m)
+const POST_SP = 0.2, POST_W = 0.012;        // (anciens poteaux, plus utilisés)
+const WALL_T = 0.015;                       // épaisseur de la barrière pleine (m)
+const PILLAR_MARGIN = 0.04;                 // écart mini entre un pied et le bord d'une piste plus basse
+
+// Un tracé = { ctrl: [points de contrôle], lev: [niveau de chaque point, 0 ou 1], w, closed,
+//              curve: [{x, y, z}], map, S (abscisse curviligne), cs (abscisse des points de contrôle),
+//              nrm (normales), dec (échantillons tous les 10 cm), railL / railR (glissières) }
+let strokes = [];
+let railMask = [];                          // masque des glissières du sol (tampons, comme les vibreurs)
+let current = null;
+let mode = 'draw';
+let sel = null, drag = null, history = [], paintState = null;
+let bad = [], bbox = null, tiles = null, totalLen = 0;
+let pillars = [], blocked = [], maxSpan = 0, conflicts = [], minClear = Infinity;
+let view = { scale: 60, ox: 0, oy: 0 };
+
+const coef = () => Math.max(0, Math.min(1, num('lissage')));
+const H2 = () => Math.max(0, num('h2'));
+const slope = () => Math.min(45, Math.max(1, num('pente')));
+const rampLen = () => H2() / Math.tan(slope() * Math.PI / 180);
+const brush = () => Math.max(0.05, num('gomme'));
+const snapDist = () => Math.max(0.3, 15 / view.scale);
+
+// ---------- Niveau travaillé : ce qui est visible et modifiable ----------
+const workLev = () => $('workLev').value;                       // 'all', '0' ou '1'
+const zVisible = z => { const w = workLev(); return w === 'all' || (w === '0' ? z <= 0.02 : z > 0.02); };
+// Un point est visible (donc modifiable) s'il est à la hauteur du niveau affiché : ce qu'on voit, on peut le modifier
+const ptVisible = (s, i) => workLev() === 'all' || zVisible(s.cz ? s.cz[i] : 0);
+
+// ---------- Repères ----------
+const P = p => ({ x: view.ox + p.x * view.scale, y: view.oy + p.y * view.scale });
+function world(e) {
+  const r = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left - view.ox) / view.scale, y: (e.clientY - r.top - view.oy) / view.scale };
+}
+function resizeCanvas() {
+  const d = window.devicePixelRatio || 1;
+  cv.width = cv.clientWidth * d;
+  cv.height = cv.clientHeight * d;
+  ctx.setTransform(d, 0, 0, d, 0, 0);
+}
+function fit() {
+  const L = num('espL'), W = num('espW'), w = cv.clientWidth, h = cv.clientHeight, m = 40;
+  view.scale = Math.min((w - 2 * m) / L, (h - 2 * m) / W);
+  view.ox = (w - L * view.scale) / 2;
+  view.oy = (h - W * view.scale) / 2;
+  view.fitted = true;                                        // vue cadrée sur l'espace : suivie au redimensionnement
+}
+
+// ---------- Géométrie de base ----------
+function norm(v) { const l = Math.hypot(v.x, v.y) || 1; return { x: v.x / l, y: v.y / l }; }
+function dirOf(a, b) { return norm({ x: b.x - a.x, y: b.y - a.y }); }
+function angle(u, v) { return Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.y * v.y))); }
+function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
+function distLine(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L2 = dx * dx + dy * dy;
+  if (!L2) return Math.hypot(p.x - a.x, p.y - a.y);
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / L2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+}
+function radius(a, b, c) {
+  const ab = dist(a, b), bc = dist(b, c), ca = dist(c, a);
+  const cross = Math.abs((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+  return cross < 1e-9 ? Infinity : (ab * bc * ca) / (2 * cross);
+}
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts.slice();
+  let maxD = 0, idx = 0;
+  const a = pts[0], b = pts[pts.length - 1];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = distLine(pts[i], a, b);
+    if (d > maxD) { maxD = d; idx = i; }
+  }
+  if (maxD > eps) {
+    const l = rdp(pts.slice(0, idx + 1), eps), r = rdp(pts.slice(idx), eps);
+    return l.slice(0, -1).concat(r);
+  }
+  return [a, b];
+}
+function decimate(pts, d = 0.25) {
+  const out = [pts[0]];
+  let last = pts[0];
+  for (const p of pts) if (dist(p, last) >= d) { out.push(p); last = p; }
+  const end = pts[pts.length - 1];
+  if (out[out.length - 1] !== end) out.push(end);
+  return out;
+}
+// Point dans un polygone (règle pair-impair)
+function inPoly(p, poly) {
+  let ins = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const a = poly[i], b = poly[j];
+    if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) ins = !ins;
+  }
+  return ins;
+}
+
+// ---------- Raccords propres entre tracés ----------
+// Quand l'extrémité d'un tracé arrive sur la chaussée d'un autre, l'angle entre les deux bords
+// est comblé par un arrondi (congé) de rayon réglable, de chaque côté.
+let fillets = [];
+const filR = () => Math.max(0, num('rfil'));
+function coveredBy(B, p, z) {
+  const lim = (B.w / 2 - 0.005) ** 2;
+  for (const q of B.curve) if (Math.abs(q.z - z) < 0.05 && (q.x - p.x) ** 2 + (q.y - p.y) ** 2 < lim) return true;
+  return false;
+}
+function onAnyRoad(p, z) {
+  for (const s of strokes) if (s.curve && coveredBy(s, p, z)) return true;
+  return false;
+}
+function filletCovers(f, p) {
+  if (inPoly(p, f.poly)) return true;
+  for (const line of [f.sideA, f.sideB])                      // bords recouverts par l'arrondi (entre le coin et son départ)
+    for (let i = 0; i < line.length - 1; i++) if (distLine(p, line[i], line[i + 1]) < 0.006) {
+      if (dist(p, line[line.length - 1]) < 0.004) return false;   // le point de départ lui-même reste un bord
+      return true;
+    }
+  return false;
+}
+function computeFillets() {
+  fillets = [];
+  const r = filR();
+  if (r <= 0) return;
+  for (const A of strokes) {
+    if (A.closed || !A.curve || A.curve.length < 3) continue;
+    const n = A.curve.length;
+    for (const end of [0, n - 1]) {
+      const pe = A.curve[end], ze = pe.z, dir = end === 0 ? 1 : -1;      // dir : vers l'intérieur du tracé A
+      let B = null;
+      for (const s of strokes) {                                         // tracé dont la chaussée reçoit cette extrémité
+        if (!s.curve) continue;
+        for (let j = 0; j < s.curve.length && !B; j++) {
+          const q = s.curve[j];
+          if (Math.abs(q.z - ze) > 0.05) continue;
+          if (s === A && Math.abs(A.S[j] - A.S[end]) < A.w * 1.5) continue;
+          if ((q.x - pe.x) ** 2 + (q.y - pe.y) ** 2 < (s.w / 2 + 0.02) ** 2) B = s;
+        }
+        if (B) break;
+      }
+      if (!B) continue;
+      for (const side of [1, -1]) {
+        const eA = side > 0 ? A.edgeL : A.edgeR;
+        let found = -1;                                                  // premier point du bord de A hors de la chaussée de B
+        for (let k = end; k >= 0 && k < n && Math.abs(A.S[k] - A.S[end]) < 3; k += dir)
+          if (!coveredBy(B, eA[k], ze)) { found = k; break; }
+        if (found < 0) continue;
+        const E = eA[found];
+        let k2 = found;
+        while (k2 + dir >= 0 && k2 + dir < n && dist(eA[k2], E) < 0.15) k2 += dir;
+        if (k2 === found) continue;
+        const tA = dirOf(E, eA[k2]);                                    // le long du bord de A, en s'éloignant du raccord
+        // bord de B le plus proche
+        let eB = null, jb = -1, bd = Infinity;
+        for (const arr of [B.edgeL, B.edgeR]) for (let j = 0; j < arr.length; j++) {
+          const d = (arr[j].x - E.x) ** 2 + (arr[j].y - E.y) ** 2;
+          if (d < bd) { bd = d; eB = arr; jb = j; }
+        }
+        if (!eB || Math.sqrt(bd) > 0.3) continue;
+        let tB = dirOf(eB[Math.max(0, jb - 2)], eB[Math.min(eB.length - 1, jb + 2)]);
+        const away = t => { const q = { x: E.x + t.x * 0.25, y: E.y + t.y * 0.25 }; let m = Infinity;
+          for (const c of A.curve) m = Math.min(m, (c.x - q.x) ** 2 + (c.y - q.y) ** 2); return m; };
+        if (away({ x: -tB.x, y: -tB.y }) > away(tB)) tB = { x: -tB.x, y: -tB.y };   // s'éloigner de A
+        const th = angle(tA, tB);
+        if (th < 0.17 || th > 2.97) continue;                           // bords presque alignés : rien à combler
+        const bis = norm({ x: tA.x + tB.x, y: tA.y + tB.y });
+        if (onAnyRoad({ x: E.x + bis.x * 0.04, y: E.y + bis.y * 0.04 }, ze)) continue;   // l'angle est déjà de la chaussée
+        // points de départ de l'arrondi, pris SUR les vrais bords (A et B) à la distance d du coin
+        const d = Math.min(1.5, r / Math.tan(th / 2));
+        const walk = (arr, j0, step) => {                       // avance le long d'un bord sur la longueur d
+          const pts = [arr[j0]]; let acc = 0, j = j0;
+          while (j + step >= 0 && j + step < arr.length && acc < d) { acc += dist(arr[j], arr[j + step]); j += step; pts.push(arr[j]); }
+          return { pts, j };
+        };
+        const wa = walk(eA, found, dir);
+        const sB = (eB[Math.min(eB.length - 1, jb + 1)].x - eB[Math.max(0, jb - 1)].x) * tB.x +
+                   (eB[Math.min(eB.length - 1, jb + 1)].y - eB[Math.max(0, jb - 1)].y) * tB.y > 0 ? 1 : -1;
+        const wb = walk(eB, jb, sB);
+        if (wa.pts.length < 2 || wb.pts.length < 2) continue;
+        const P1 = wa.pts[wa.pts.length - 1], P2 = wb.pts[wb.pts.length - 1];
+        // tangentes des bords en P1 / P2, orientées vers le coin
+        const tg = (arr, j, step) => dirOf(arr[Math.min(arr.length - 1, Math.max(0, j))], arr[Math.min(arr.length - 1, Math.max(0, j - 2 * step))]);
+        const u1 = tg(eA, wa.j, dir), u2 = tg(eB, wb.j, sB);
+        const k = 0.55 * Math.min(dist(P1, E), dist(P2, E)) * (1.3 - 0.3 * Math.cos(th));
+        const Q1 = { x: P1.x + u1.x * k, y: P1.y + u1.y * k }, Q2 = { x: P2.x + u2.x * k, y: P2.y + u2.y * k };
+        const m = Math.max(6, Math.ceil((dist(P1, Q1) + dist(Q1, Q2) + dist(Q2, P2)) / 0.04));
+        const arc = [];
+        for (let i = 0; i <= m; i++) {                          // courbe de Bézier tangente aux deux bords
+          const t = i / m, a0 = (1 - t) ** 3, a1 = 3 * t * (1 - t) ** 2, a2 = 3 * t * t * (1 - t), a3 = t ** 3;
+          arc.push({ x: a0 * P1.x + a1 * Q1.x + a2 * Q2.x + a3 * P2.x, y: a0 * P1.y + a1 * Q1.y + a2 * Q2.y + a3 * P2.y });
+        }
+        // normale côté chaussée (vers le coin E) en chaque point de l'arrondi
+        const mid = arc[m >> 1];
+        let sg = 1;
+        { const t = dirOf(arc[(m >> 1) - 1], arc[(m >> 1) + 1]); if ((-t.y) * (E.x - mid.x) + t.x * (E.y - mid.y) < 0) sg = -1; }
+        const inN = arc.map((q, i) => { const t = dirOf(arc[Math.max(0, i - 1)], arc[Math.min(m, i + 1)]); return { x: -t.y * sg, y: t.x * sg }; });
+        const sideA = wa.pts, sideB = wb.pts;                    // E → P1 et E → P2, le long des vrais bords
+        const E0 = { x: E.x - bis.x * 0.03, y: E.y - bis.y * 0.03 };   // léger débord sur la chaussée : pas d'éclat blanc au coin
+        const poly = [E0, ...sideA, ...arc.slice(1, -1), ...sideB.slice(1).reverse()];
+        fillets.push({ poly, arc, inN, sideA, sideB, z: ze, E: { x: E.x, y: E.y }, P1, P2, A, sideA_: side, B, sideB_: eB === B.edgeL ? 1 : -1 });
+      }
+    }
+  }
+}
+
+// Barrière le long de l'arrondi si les deux bords voisins en ont une
+function filletRails() {
+  const flagNear = (s, side, q) => {
+    const e = side > 0 ? s.edgeL : s.edgeR, f = side > 0 ? s.railL : s.railR;
+    let bj = -1, bd = Infinity;
+    for (let j = 0; j < e.length; j++) { const d = (e[j].x - q.x) ** 2 + (e[j].y - q.y) ** 2; if (d < bd) { bd = d; bj = j; } }
+    for (let k = Math.max(0, bj - 3); k <= Math.min(e.length - 1, bj + 3); k++) if (f[k]) return true;
+    return false;
+  };
+  for (const f of fillets) {
+    f.rail = flagNear(f.A, f.sideA_, f.P1) && flagNear(f.B, f.sideB_, f.P2);
+    const off = railOffAt(f.z);
+    f.railPts = f.arc.map((q, i) => { const u = f.inN[i]; return { x: q.x - u.x * off, y: q.y - u.y * off, nx: -u.x, ny: -u.y }; });
+  }
+}
+// décalage d'une glissière par rapport au bord (même règle que railOff)
+function railOffAt(z) { const t = Math.min(1, z / 0.02); return 0.015 - 0.023 * t; }
+
+// ---------- Lissage automatique ----------
+function relax(ctrl, k, closed, movable) {
+  const n = ctrl.length;
+  if (k <= 0 || n < 3) return ctrl;
+  const cl = closed && n >= 3;
+  const fixed = ctrl.map((p, i) => {
+    if (movable && !movable(i)) return true;                // point d'un niveau masqué : protégé
+    if (!cl && (i === 0 || i === n - 1)) return true;
+    const a = ctrl[(i - 1 + n) % n], b = ctrl[(i + 1) % n];
+    return false;                                           // plus de coude vif : tout point peut être lissé
+  });
+  const iters = Math.max(1, Math.round(k * 6));
+  let c = ctrl.map(p => ({ x: p.x, y: p.y }));
+  for (let it = 0; it < iters; it++) {
+    const nxt = c.map(p => ({ x: p.x, y: p.y }));
+    for (let i = 0; i < n; i++) {
+      if (fixed[i]) continue;
+      const a = c[(i - 1 + n) % n], b = c[(i + 1) % n];
+      const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      nxt[i] = { x: c[i].x + 0.5 * k * (mx - c[i].x), y: c[i].y + 0.5 * k * (my - c[i].y) };
+    }
+    c = nxt;
+  }
+  return c;
+}
+
+// ---------- Tangentes et courbes (ouvertes ou bouclées) ----------
+function tangents(c, cl) {
+  const n = c.length, tin = [], tout = [];
+  for (let i = 0; i < n; i++) {
+    if (!cl && i === 0) { const d = dirOf(c[0], c[1]); tin[0] = d; tout[0] = d; continue; }
+    if (!cl && i === n - 1) { const d = dirOf(c[n - 2], c[n - 1]); tin[i] = d; tout[i] = d; continue; }
+    const pr = c[(i - 1 + n) % n], nx = c[(i + 1) % n];
+    const a = dirOf(pr, c[i]), b = dirOf(c[i], nx);
+    // tangente toujours continue (pas de coude vif) : bords, glissières et tablier restent propres
+    const d = norm({ x: nx.x - pr.x, y: nx.y - pr.y }); tin[i] = d; tout[i] = d;
+  }
+  return { tin, tout };
+}
+function sampleCurve(c, closed) {
+  const n = c.length, out = [], map = [];
+  if (n < 2) return { out: c.map(p => ({ x: p.x, y: p.y })), map: c.map(() => 0) };
+  const cl = closed && n >= 3;
+  const { tin, tout } = tangents(c, cl);
+  const segs = cl ? n : n - 1;
+  for (let i = 0; i < segs; i++) {
+    const p0 = c[i], p1 = c[(i + 1) % n];
+    const chord = dirOf(p0, p1), L = dist(p0, p1);
+    let T0 = tout[i], T1 = tin[(i + 1) % n];
+    if (angle(T0, chord) < 0.07) T0 = chord;               // tangentes alignées : vraie ligne droite
+    if (angle(T1, chord) < 0.07) T1 = chord;
+    const h = L / 3;
+    const c1 = { x: p0.x + T0.x * h, y: p0.y + T0.y * h };
+    const c2 = { x: p1.x - T1.x * h, y: p1.y - T1.y * h };
+    const ns = Math.min(300, Math.max(2, Math.ceil(L / 0.03)));
+    for (let k = (i === 0 ? 0 : 1); k <= ns; k++) {
+      const t = k / ns, u = 1 - t;
+      out.push({
+        x: u * u * u * p0.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * p1.x,
+        y: u * u * u * p0.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * p1.y
+      });
+      map.push(i);
+    }
+  }
+  return { out, map };
+}
+
+// ---------- Hauteurs : niveau 1 + rampes à pente constante ----------
+// Les portions dont les points sont au niveau 1 sont à la hauteur H.
+// De part et d'autre, la piste redescend en ligne droite avec la pente choisie
+// (longueur de rampe = H / tan(angle)).
+function computeZ(s) {
+  const c = s.curve, n = c.length, S = new Array(n);
+  S[0] = 0;
+  for (let j = 1; j < n; j++) S[j] = S[j - 1] + dist(c[j], c[j - 1]);
+  s.S = S;
+  const T = S[n - 1] || 0, m = s.ctrl.length, cs = new Array(m).fill(0);
+  for (let j = 0; j < n; j++) { const nx = s.map[j] + 1; if (nx < m) cs[nx] = S[j]; }
+  s.cs = cs;
+  const cl = s.closed && m >= 3, segs = cl ? m : m - 1, iv = [];
+  for (let i = 0; i < m; i++) if (s.lev[i] === 1) iv.push([cs[i], cs[i]]);
+  for (let i = 0; i < segs; i++) {
+    const i2 = (i + 1) % m;
+    if (s.lev[i] === 1 && s.lev[i2] === 1) iv.push([cs[i], i2 === 0 ? T : cs[i2]]);
+  }
+  const H = H2(), R = Math.max(1e-6, rampLen());
+  const dI = (v, a, b) => v < a ? a - v : v > b ? v - b : 0;
+  for (let j = 0; j < n; j++) {
+    if (!iv.length) { c[j].z = 0; continue; }
+    let d = Infinity;
+    for (const [a, b] of iv) {
+      d = Math.min(d, dI(S[j], a, b));
+      if (cl) d = Math.min(d, dI(S[j] + T, a, b), dI(S[j] - T, a, b));
+    }
+    c[j].z = H * Math.max(0, 1 - d / R);
+  }
+  // Un tracé ouvert touche toujours le sol à ses extrémités : rampe automatique si un bout est au niveau 1
+  if (!cl && T > 0) {
+    const tg = Math.tan(slope() * Math.PI / 180);
+    for (let j = 0; j < n; j++) c[j].z = Math.min(c[j].z, tg * Math.min(S[j], T - S[j]));
+  }
+}
+function computeNormals(s) {
+  const c = s.curve, n = c.length;
+  s.nrm = new Array(n);
+  for (let j = 0; j < n; j++) {
+    let a, b;
+    if (s.closed && n > 2) { a = c[j > 0 ? j - 1 : n - 2]; b = c[j < n - 1 ? j + 1 : 1]; }
+    else { a = c[Math.max(0, j - 1)]; b = c[Math.min(n - 1, j + 1)]; }
+    const d = dirOf(a, b);
+    s.nrm[j] = { x: -d.y, y: d.x };                        // normale à gauche du sens de tracé
+  }
+}
+function computeDec(s) {
+  s.dec = [];
+  let last = -Infinity;
+  const c = s.curve, n = c.length;
+  for (let j = 0; j < n; j++) {
+    if (s.S[j] - last >= 0.1 || j === n - 1) { s.dec.push({ x: c[j].x, y: c[j].y, z: c[j].z, S: s.S[j] }); last = s.S[j]; }
+  }
+}
+// Glissières : niveau 1 et rampes des deux côtés ; au sol selon le réglage.
+// « Extérieur de la boucle » : le côté dont un point décalé tombe hors du polygone de la boucle.
+// Côté extérieur de chaque virage : opposé au centre de courbure (+1 = gauche, -1 = droite).
+// Dans les lignes droites, on garde le côté du virage le plus proche.
+function outerSides(s) {
+  const c = s.curve, n = c.length, S = s.S, WIN = 0.5, KMIN = 1 / 8, side = new Array(n).fill(0);
+  let ia = 0, ib = 0;
+  for (let j = 0; j < n; j++) {
+    while (ia < j && S[j] - S[ia] > WIN) ia++;
+    while (ib < n - 1 && S[ib] - S[j] < WIN) ib++;
+    if (ia === j || ib === j) continue;
+    const d1 = dirOf(c[ia], c[j]), d2 = dirOf(c[j], c[ib]);
+    const k = Math.atan2(d1.x * d2.y - d1.y * d2.x, d1.x * d2.x + d1.y * d2.y) / Math.max(1e-6, S[ib] - S[ia]);
+    side[j] = k > KMIN ? -1 : k < -KMIN ? 1 : 0;             // virage à gauche → extérieur à droite
+  }
+  if (side.every(v => v === 0)) return side;                 // ligne droite pure : pas de côté privilégié
+  // lignes droites : côté du virage le plus proche le long de la piste (boucle comprise)
+  const curved = [];
+  side.forEach((v, j) => { if (v) curved.push(j); });
+  return side.map((v, j) => {
+    if (v) return v;
+    let best = 0, bd = Infinity;
+    for (const k of curved) { const d = arcDist(s, S[j], S[k]); if (d < bd) { bd = d; best = side[k]; } }
+    return best;
+  });
+}
+function computeRails(s) {
+  const c = s.curve, n = c.length, md = $('railMode').value;
+  s.railL = new Array(n); s.railR = new Array(n);
+  const poly = (md === 'ext' && s.closed) ? s.dec : null;
+  const outer = md === 'turns' ? outerSides(s) : null;
+  const off = s.w / 2 + 0.15;
+  for (let j = 0; j < n; j++) {
+    let L, R;
+    if (c[j].z > Z_EPS) { L = R = true; }                      // niveau 1 et rampes : obligatoire des deux côtés
+    else if (md === 'manual') {
+      L = inMask(railMask, s.railPL[j], c[j].z);
+      R = inMask(railMask, s.railPR[j], c[j].z);
+    }
+    else if (md === 'none') { L = R = false; }
+    else if (outer) { L = outer[j] === 1 || outer[j] === 0; R = outer[j] === -1 || outer[j] === 0; }
+    else if (!poly) { L = R = true; }
+    else {
+      const nr = s.nrm[j];
+      L = !inPoly({ x: c[j].x + nr.x * off, y: c[j].y + nr.y * off }, poly);
+      R = !inPoly({ x: c[j].x - nr.x * off, y: c[j].y - nr.y * off }, poly);
+    }
+    if (L && !visibleEdge(s.edgeL[j], c[j].z)) L = false;        // bord recouvert par une autre chaussée ou un raccord
+    if (R && !visibleEdge(s.edgeR[j], c[j].z)) R = false;
+    s.railL[j] = L; s.railR[j] = R;
+  }
+}
+// Ligne décalée (bord de voie, glissière) nettoyée de ses replis :
+// dans un virage plus serré que le décalage, la ligne décalée ferait une boucle vers l'arrière ;
+// on retient alors le dernier point valide jusqu'à ce que la ligne reparte vers l'avant.
+function offsetLine(s, side, offAt) {
+  const c = s.curve, n = c.length, out = new Array(n);
+  let P = null;
+  for (let j = 0; j < n; j++) {
+    const o = offAt(j) * side;
+    let Q = { x: c[j].x + s.nrm[j].x * o, y: c[j].y + s.nrm[j].y * o };
+    if (P && j > 0) {
+      const tx = c[j].x - c[j - 1].x, ty = c[j].y - c[j - 1].y;
+      if ((Q.x - P.x) * tx + (Q.y - P.y) * ty <= 0) Q = { x: P.x, y: P.y };
+    }
+    out[j] = Q; P = Q;
+  }
+  return out;
+}
+// Décalage d'une glissière : continu entre le sol (un peu à l'extérieur) et le tablier (sur le bord)
+function railOff(s, j) {
+  const t = Math.min(1, s.curve[j].z / 0.02);
+  return s.w / 2 + 0.015 - 0.023 * t;
+}
+function computeEdges(s) {
+  s.edgeL = offsetLine(s, 1, () => s.w / 2);
+  s.edgeR = offsetLine(s, -1, () => s.w / 2);
+  s.railPL = offsetLine(s, 1, j => railOff(s, j));
+  s.railPR = offsetLine(s, -1, j => railOff(s, j));
+}
+
+function rebuild(s) {
+  if (!s.lev || s.lev.length !== s.ctrl.length) s.lev = s.ctrl.map((_, i) => (s.lev && s.lev[i]) || 0);
+  if (s.ctrl.length < 3) s.closed = false;
+  const r = sampleCurve(s.ctrl, s.closed);
+  s.curve = r.out.map(p => ({ x: p.x, y: p.y, z: 0 }));
+  s.map = r.map;
+  computeZ(s);
+  s.cz = s.cs.map(v => s.curve[idxAt(s, v)].z);              // hauteur de chaque point de contrôle
+  computeNormals(s);
+  computeEdges(s);
+  { let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (const q of s.curve) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); }
+    const m = s.w / 2 + 0.05; s.bb = { x0: x0 - m, y0: y0 - m, x1: x1 + m, y1: y1 + m }; }
+  computeDec(s);
+  computeRails(s);
+}
+function rebuildAll() { strokes.forEach(rebuild); }
+
+// ---------- Outils sur l'abscisse curviligne ----------
+function idxAt(s, t) {
+  const S = s.S, n = S.length, T = S[n - 1];
+  if (s.closed && T > 0) t = ((t % T) + T) % T;
+  let lo = 0, hi = n - 1;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (S[mid] < t) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+function arcDist(s, a, b) {
+  let d = Math.abs(a - b);
+  if (s.closed) { const T = s.S[s.S.length - 1]; d = Math.min(d, T - d); }
+  return d;
+}
+function minZBetween(s, a, b) {
+  let m = Infinity;
+  for (let j = 0; j < s.S.length; j++) if (s.S[j] >= a && s.S[j] <= b) m = Math.min(m, s.curve[j].z);
+  return m;
+}
+
+// ---------- Pieds du niveau 1 : jamais sur une piste plus basse ----------
+function freeAt(p, si, Sp, zDeck, ps) {
+  const rad = ps / 2 + PILLAR_MARGIN;
+  for (let ti = 0; ti < strokes.length; ti++) {
+    const t = strokes[ti];
+    for (const q of t.dec) {
+      if (q.z > zDeck - DECK - 0.01) continue;              // pas en dessous du tablier
+      if (ti === si && arcDist(t, q.S, Sp) < t.w * 2 + 0.3) continue;   // même portion de piste (rampe)
+      if (Math.hypot(q.x - p.x, q.y - p.y) < t.w / 2 + rad) return false;
+    }
+  }
+  return true;
+}
+function computePillars() {
+  pillars = []; blocked = []; maxSpan = 0;
+  const sp = Math.max(0.1, num('pSp')), ps = Math.max(0.01, num('pSec')), zMin = DECK + 0.03;
+  strokes.forEach((s, si) => {
+    const c = s.curve, n = c.length;
+    if (n < 2) return;
+    const T = s.S[n - 1], lat = Math.max(0, s.w / 2 - ps / 2 - 0.01), mine = [];
+    for (let t = sp / 2; t < T; t += sp) {
+      const j0 = idxAt(s, t);
+      if (c[j0].z < zMin) continue;
+      let placed = null;
+      // on essaie au centre, puis sur les bords, puis en décalant le long de la piste
+      search:
+      for (let k = 0; k <= Math.floor(sp / 2 / 0.05); k++) {
+        for (const sg of (k === 0 ? [1] : [1, -1])) {
+          const tt = t + sg * k * 0.05;
+          if (!s.closed && (tt < 0 || tt > T)) continue;
+          const j = idxAt(s, tt);
+          if (c[j].z < zMin) continue;
+          for (const l of [0, lat, -lat]) {
+            const p = { x: c[j].x + s.nrm[j].x * l, y: c[j].y + s.nrm[j].y * l };
+            if (freeAt(p, si, s.S[j], c[j].z, ps)) { placed = { x: p.x, y: p.y, h: c[j].z - DECK, S: s.S[j] }; break search; }
+          }
+        }
+      }
+      if (placed) { pillars.push(placed); mine.push(placed); }
+      else blocked.push({ x: c[j0].x, y: c[j0].y });
+    }
+    mine.sort((a, b) => a.S - b.S);
+    for (let i = 1; i < mine.length; i++) {
+      const a = mine[i - 1], b = mine[i];
+      if (minZBetween(s, a.S, b.S) >= zMin) maxSpan = Math.max(maxSpan, b.S - a.S);
+    }
+    // boucle : portée entre le dernier et le premier pied, en passant par le point de départ
+    if (s.closed && mine.length > 1) {
+      const a = mine[mine.length - 1], b = mine[0];
+      if (Math.min(minZBetween(s, a.S, T), minZBetween(s, 0, b.S)) >= zMin) maxSpan = Math.max(maxSpan, T - a.S + b.S);
+    }
+  });
+}
+// ---------- Croisements : hauteur libre entre deux portions superposées ----------
+function computeCrossings() {
+  conflicts = []; minClear = Infinity;
+  const need = num('clear'), all = [];
+  strokes.forEach((s, si) => s.dec.forEach(q => all.push({ q, si, s })));
+  for (let i = 0; i < all.length; i++) {
+    const A = all[i];
+    for (let j = i + 1; j < all.length; j++) {
+      const B = all[j];
+      const dz = Math.abs(A.q.z - B.q.z);
+      if (dz < Z_EPS) continue;                                // même niveau : jonction normale
+      if (A.si === B.si && arcDist(A.s, A.q.S, B.q.S) < A.s.w * 2 + 0.3) continue;
+      if (Math.hypot(A.q.x - B.q.x, A.q.y - B.q.y) >= (A.s.w + B.s.w) / 2) continue;
+      const clr = dz - DECK;
+      if (clr < minClear) minClear = clr;
+      if (clr < need) {
+        const m = { x: (A.q.x + B.q.x) / 2, y: (A.q.y + B.q.y) / 2 };
+        if (!conflicts.some(c => dist(c, m) < 0.3)) conflicts.push(m);
+      }
+    }
+  }
+}
+
+// ---------- Historique ----------
+function snap() {
+  history.push(JSON.stringify({ s: strokes.map(s => ({ ctrl: s.ctrl, lev: s.lev, w: s.w, closed: s.closed })), m: marks, k: kerbMask, r: railMask }));
+  if (history.length > 100) history.shift();
+}
+function undo() {
+  if (!history.length) return;
+  const h = JSON.parse(history.pop());
+  strokes = Array.isArray(h) ? h : h.s;
+  marks = Array.isArray(h) ? marks : h.m;
+  if (!Array.isArray(h) && h.k) kerbMask = h.k;
+  if (!Array.isArray(h) && h.r) railMask = h.r;
+  selMark = -1;
+  rebuildAll();
+  sel = null;
+  update();
+}
+
+// ---------- Édition ----------
+function findPoint(p) {
+  const tol = 12 / view.scale;
+  let best = null, bd = tol;
+  strokes.forEach((s, si) => s.ctrl.forEach((q, i) => {
+    if (!ptVisible(s, i)) return;
+    const d = dist(q, p);
+    if (d < bd) { bd = d; best = { s: si, i }; }
+  }));
+  return best;
+}
+function findSegment(p) {
+  const tol = 8 / view.scale;
+  let best = null, bd = tol;
+  strokes.forEach((s, si) => s.curve.forEach((q, j) => {
+    if (!zVisible(q.z)) return;
+    const d = dist(q, p);
+    if (d < bd) { bd = d; best = { s: si, k: s.map[j] }; }
+  }));
+  return best;
+}
+// Extrémité d'un tracé ouvert proche de p
+function findEnd(p, d, excl) {
+  let best = null, bd = d;
+  strokes.forEach((s, si) => {
+    if (s.closed || s === excl) return;
+    const m = s.ctrl.length;
+    [['start', 0], ['end', m - 1]].forEach(([e, i]) => {
+      const dd = dist(s.ctrl[i], p);
+      if (dd < bd) { bd = dd; best = { s: si, end: e }; }
+    });
+  });
+  return best;
+}
+function deletePoint(hit) {
+  if (!hit || !strokes[hit.s]) return;
+  snap();
+  const s = strokes[hit.s];
+  if (s.ctrl.length > 2) {
+    s.ctrl.splice(hit.i, 1); s.lev.splice(hit.i, 1);
+    rebuild(s);
+  } else strokes.splice(hit.s, 1);
+  sel = null;
+  update();
+}
+function setPointLevel(L) {
+  if (!sel || !strokes[sel.s]) { $('info').innerHTML += '<br><i>Sélectionne d\'abord un point (mode Éditer).</i>'; return; }
+  snap();
+  const s = strokes[sel.s];
+  s.lev[sel.i] = L;
+  rebuild(s);
+  update();
+}
+// Gomme : supprime les points proches du pinceau ; une boucle coupée devient un tracé ouvert.
+function erase(p) {
+  const r = brush(), out = [];
+  for (const s of strokes) {
+    const c = s.ctrl, n = c.length, rem = new Array(n).fill(false);
+    for (let i = 0; i < n; i++) if (ptVisible(s, i) && dist(c[i], p) < r) rem[i] = true;
+    const segs = s.closed && n >= 3 ? n : n - 1;
+    for (let i = 0; i < segs; i++) {
+      const i2 = (i + 1) % n;
+      if (!ptVisible(s, i) || !ptVisible(s, i2)) continue;      // la gomme ne touche pas le niveau masqué
+      if (distLine(p, c[i], c[i2]) < r) { rem[i] = true; rem[i2] = true; }
+    }
+    if (!rem.some(Boolean)) { out.push(s); continue; }
+    let order = [...Array(n).keys()];
+    if (s.closed) { const r0 = rem.indexOf(true); order = order.map(i => (i + r0) % n); }
+    let run = [], rl = [];
+    const flush = () => {
+      if (run.length > 1) { const ns = { ctrl: run, lev: rl, w: s.w, closed: false }; rebuild(ns); out.push(ns); }
+      run = []; rl = [];
+    };
+    for (const i of order) { if (rem[i]) flush(); else { run.push(c[i]); rl.push(s.lev[i]); } }
+    flush();
+  }
+  strokes = out;
+  sel = null;
+}
+// Pinceau de niveau : suit la branche de piste touchée au départ (sûr aux croisements)
+function nearestSample(p, r) {
+  let best = null, bd = r;
+  strokes.forEach((s, si) => s.curve.forEach((q, j) => {
+    if (!zVisible(q.z)) return;
+    const d = dist(q, p);
+    if (d < bd) { bd = d; best = { si, j }; }
+  }));
+  return best;
+}
+function paintStart(p) {
+  const h = nearestSample(p, brush());
+  paintState = h ? { si: h.si, S: strokes[h.si].S[h.j] } : null;
+  if (h) paintLevel(p);
+}
+function paintLevel(p) {
+  if (!paintState) return;
+  const s = strokes[paintState.si];
+  if (!s) return;
+  const r = brush(), L = +$('paintLev').value, win = 2 * r + 0.3;
+  let bj = -1, bd = r;
+  for (let j = 0; j < s.curve.length; j++) {
+    if (arcDist(s, s.S[j], paintState.S) > win) continue;
+    const d = dist(s.curve[j], p);
+    if (d < bd) { bd = d; bj = j; }
+  }
+  if (bj < 0) return;
+  const Sj = s.S[bj];
+  paintState.S = Sj;
+  let hit = false;
+  s.cs.forEach((v, i) => { if (arcDist(s, v, Sj) < r) { s.lev[i] = L; hit = true; } });
+  if (!hit) {                                                 // pas de point ici : on en ajoute un sur la courbe
+    const k = s.map[bj];
+    s.ctrl.splice(k + 1, 0, { x: s.curve[bj].x, y: s.curve[bj].y });
+    s.lev.splice(k + 1, 0, L);
+  }
+  rebuild(s);
+}
+// Fin d'un trait : prolongement, bouclage, raccordement
+function finishStroke(raw, join) {
+  let len = 0;
+  for (let i = 1; i < raw.length; i++) len += dist(raw[i], raw[i - 1]);
+  if (len < 0.1) return;
+  const pts = relax(rdp(raw, 0.04), coef(), false);
+  if (pts.length < 2) return;
+  const lv = +$('drawLev').value, snapD = snapDist();
+  let s, freeAtEnd = true;
+  if (join && strokes[join.s]) {
+    s = strokes[join.s];
+    const add = pts.slice(1);
+    if (join.end === 'end') { s.ctrl = s.ctrl.concat(add); s.lev = s.lev.concat(add.map(() => lv)); }
+    else {
+      const rv = add.reverse();
+      s.ctrl = rv.concat(s.ctrl); s.lev = rv.map(() => lv).concat(s.lev);
+      freeAtEnd = false;
+    }
+  } else {
+    s = { ctrl: pts, lev: pts.map(() => lv), w: num('voie'), closed: false };
+    strokes.push(s);
+  }
+  const m = s.ctrl.length;
+  const tip = freeAtEnd ? s.ctrl[m - 1] : s.ctrl[0];
+  const other = freeAtEnd ? s.ctrl[0] : s.ctrl[m - 1];
+  if (m >= 4 && dist(tip, other) < snapD) {                   // retour au départ : on boucle
+    if (freeAtEnd) { s.ctrl.pop(); s.lev.pop(); } else { s.ctrl.shift(); s.lev.shift(); }
+    s.closed = true;
+  } else {
+    const hit = findEnd(tip, snapD, s);                       // arrivée sur un autre tracé : on raccorde
+    if (hit) {
+      const u = strokes[hit.s];
+      const uc = u.ctrl.slice(), ul = u.lev.slice();
+      if (freeAtEnd) {
+        if (hit.end === 'end') { uc.reverse(); ul.reverse(); }
+        s.ctrl.pop(); s.lev.pop();
+        s.ctrl = s.ctrl.concat(uc); s.lev = s.lev.concat(ul);
+      } else {
+        if (hit.end === 'start') { uc.reverse(); ul.reverse(); }
+        s.ctrl.shift(); s.lev.shift();
+        s.ctrl = uc.concat(s.ctrl); s.lev = ul.concat(s.lev);
+      }
+      strokes.splice(strokes.indexOf(u), 1);
+      const mm = s.ctrl.length;
+      if (mm >= 4 && dist(s.ctrl[0], s.ctrl[mm - 1]) < snapD) { s.ctrl.pop(); s.lev.pop(); s.closed = true; }
+    }
+  }
+  rebuild(s);
+}
+
+// ---------- Analyse ----------
+function analyse() {
+  computeFillets();
+  strokes.forEach(computeRails);                             // glissières coupées aux raccords
+  filletRails();
+  const ech = num('echelle'), rmin = num('rmin');
+  bad = []; totalLen = 0;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const s of strokes) {
+    if (s.curve.length < 2) continue;
+    const p = decimate(s.curve, 0.25), h = s.w / 2 + 0.03;   // marge pour les glissières
+    for (let i = 0; i < p.length; i++) {
+      x0 = Math.min(x0, p[i].x - h); x1 = Math.max(x1, p[i].x + h);
+      y0 = Math.min(y0, p[i].y - h); y1 = Math.max(y1, p[i].y + h);
+      if (i > 0) totalLen += dist(p[i], p[i - 1]);
+      if (i > 0 && i < p.length - 1 && radius(p[i - 1], p[i], p[i + 1]) < rmin) bad.push(p[i]);
+    }
+  }
+  bbox = null; tiles = null;
+  if (isFinite(x0)) {
+    bbox = { x0, y0, x1, y1 };
+    const pw = (x1 - x0) * 1000 / ech, ph = (y1 - y0) * 1000 / ech;
+    tiles = { tx: Math.ceil(pw / TILE_MM), ty: Math.ceil(ph / TILE_MM), pw, ph };
+  }
+  computePillars();
+  computeCrossings();
+  computeKerbs();
+}
+
+// ---------- Dessin 2D ----------
+const C0 = [0x44, 0x44, 0x44], C1 = [0x24, 0x52, 0x7f];
+function roadColor(t) {
+  const c = C0.map((v, i) => Math.round(v + (C1[i] - v) * t));
+  return `rgb(${c[0]},${c[1]},${c[2]})`;
+}
+function seg(x1, y1, x2, y2, color, lw, dash = []) {
+  const a = P({ x: x1, y: y1 }), b = P({ x: x2, y: y2 });
+  ctx.save();
+  ctx.beginPath();
+  ctx.setLineDash(dash);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lw;
+  ctx.moveTo(a.x, a.y);
+  ctx.lineTo(b.x, b.y);
+  ctx.stroke();
+  ctx.restore();
+}
+function pathRange(c, a, b) {
+  ctx.beginPath();
+  for (let j = a; j <= b; j++) { const q = P(c[j]); j === a ? ctx.moveTo(q.x, q.y) : ctx.lineTo(q.x, q.y); }
+}
+function drawRoad(r, BINS) {
+  const s = r.s, c = s.curve;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  pathRange(c, r.a, r.b);
+  ctx.strokeStyle = roadColor(r.bin / BINS);
+  ctx.lineWidth = s.w * view.scale;
+  ctx.stroke();
+}
+function drawFillets(keep, color) {
+  ctx.fillStyle = color;
+  for (const f of fillets) {
+    if (!keep(f.z)) continue;
+    const vis = zVisible(f.z);
+    if (!vis && !$('ghost').checked) continue;
+    ctx.globalAlpha = vis ? 1 : 0.15;
+    ctx.beginPath(); f.poly.forEach((q, i) => { const Q = P(q); i ? ctx.lineTo(Q.x, Q.y) : ctx.moveTo(Q.x, Q.y); }); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.stroke();          // pas de liseré blanc au contact
+    if (f.rail) {
+      ctx.lineCap = 'butt'; ctx.strokeStyle = '#9aa1a8'; ctx.lineWidth = Math.max(2, WALL_T * view.scale);
+      ctx.beginPath(); f.railPts.forEach((q, i) => { const Q = P(q); i ? ctx.lineTo(Q.x, Q.y) : ctx.moveTo(Q.x, Q.y); }); ctx.stroke();
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+function drawDetails(r) {
+  const s = r.s, c = s.curve;
+  // glissières
+  ctx.lineCap = 'butt';
+  ctx.strokeStyle = '#9aa1a8';
+  ctx.lineWidth = Math.max(2, WALL_T * view.scale);          // barrière pleine, à l'épaisseur réelle
+  for (const side of [1, -1]) {
+    const f = side > 0 ? s.railL : s.railR;
+    let open = false;
+    ctx.beginPath();
+    for (let j = r.a; j <= r.b; j++) {
+      if (!f[j]) { open = false; continue; }
+      const q = P((side > 0 ? s.railPL : s.railPR)[j]);
+      if (!open) { ctx.moveTo(q.x, q.y); open = true; } else ctx.lineTo(q.x, q.y);
+    }
+    ctx.stroke();
+  }
+  // axe
+  ctx.lineCap = 'round';
+  pathRange(c, r.a, r.b);
+  ctx.strokeStyle = '#ffd400';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([8, 6]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+function draw() {
+  const w = cv.clientWidth, h = cv.clientHeight;
+  ctx.clearRect(0, 0, w, h);
+  const L = num('espL'), W = num('espW'), ech = num('echelle');
+
+  // sol de l'espace (couleur réglable) et quadrillage lisible sur fond clair comme foncé
+  const sol = $('solCol').value || '#eeeeea';
+  const lum = (parseInt(sol.slice(1, 3), 16) * 0.299 + parseInt(sol.slice(3, 5), 16) * 0.587 + parseInt(sol.slice(5, 7), 16) * 0.114) / 255;
+  { const a = P({ x: 0, y: 0 }), b = P({ x: L, y: W }); ctx.fillStyle = sol; ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y); }
+  const gridCol = lum > 0.6 ? 'rgba(0,0,0,0.07)' : 'rgba(255,255,255,0.16)';
+  for (let x = 0; x <= L + 1e-9; x += 0.5) seg(x, 0, x, W, gridCol, 1);
+  for (let y = 0; y <= W + 1e-9; y += 0.5) seg(0, y, L, y, gridCol, 1);
+  seg(0, 0, L, 0, '#999', 1.5, [6, 4]);
+  seg(L, 0, L, W, '#999', 1.5, [6, 4]);
+  seg(L, W, 0, W, '#999', 1.5, [6, 4]);
+  seg(0, W, 0, 0, '#999', 1.5, [6, 4]);
+
+  if (false && tiles && bbox) {
+    const t = TILE_MM / 1000 * ech;
+    for (let i = 0; i <= tiles.tx; i++)
+      seg(bbox.x0 + i * t, bbox.y0, bbox.x0 + i * t, bbox.y0 + tiles.ty * t, '#ff7a00', 1.5, [6, 4]);
+    for (let j = 0; j <= tiles.ty; j++)
+      seg(bbox.x0, bbox.y0 + j * t, bbox.x0 + tiles.tx * t, bbox.y0 + j * t, '#ff7a00', 1.5, [6, 4]);
+  }
+
+  // Portions de piste triées par hauteur : le niveau 1 passe par-dessus le niveau 0
+  const H = H2(), BINS = 6, runs = [];
+  const bin = z => H > 0 ? Math.round(Math.min(1, z / H) * BINS) : 0;
+  for (const s of strokes) {
+    const c = s.curve, n = c.length;
+    if (n < 2) continue;
+    let st = 0, b = bin(c[0].z);
+    for (let j = 1; j < n; j++) {
+      const bj = bin(c[j].z);
+      if (bj !== b) { runs.push({ s, a: st, b: j, bin: b }); st = j; b = bj; }
+    }
+    runs.push({ s, a: st, b: n - 1, bin: b });
+  }
+  runs.sort((x, y) => x.bin - y.bin);
+  const wl = workLev(), ghost = $('ghost').checked;
+  const runVisible = r => wl === 'all' || (wl === '0' ? r.bin === 0 : r.bin > 0);
+  // Étage par étage : chaussée, puis ses vibreurs et marquages ; l'étage du dessus les recouvre
+  const drawnLayers = new Set();
+  const layer = b => { if (drawnLayers.has(b)) return; drawnLayers.add(b); drawKerbStrips(z => bin(z) === b, ghost); drawMarks(z => bin(z) === b); };
+  // pour chaque étage : toutes les chaussées, les raccords, puis bords, axes, vibreurs et marquages
+  const withAlpha = (r, fn) => {
+    if (runVisible(r)) { fn(); return; }
+    if (!ghost) return;                                      // niveau masqué
+    ctx.save(); ctx.globalAlpha = 0.15; fn(); ctx.restore();
+  };
+  const binList = [...new Set(runs.map(r => r.bin))].sort((a, b) => a - b);
+  for (const b of binList) {
+    const rb = runs.filter(r => r.bin === b);
+    for (const r of rb) withAlpha(r, () => drawRoad(r, BINS));
+    drawFillets(z => bin(z) === b, roadColor(b / BINS));
+    for (const r of rb) withAlpha(r, () => drawDetails(r));
+    layer(b);
+  }
+  for (let b = 0; b <= BINS; b++) layer(b);
+
+  drawKerbOverlay(wl);
+
+  if (current && current.pts.length > 1) {
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    pathRange(current.pts, 0, current.pts.length - 1);
+    ctx.strokeStyle = roadColor(+$('drawLev').value);
+    ctx.lineWidth = num('voie') * view.scale;
+    ctx.stroke();
+  }
+
+  // Pieds
+  const ps = Math.max(0.01, num('pSec')), pz = Math.max(4, ps * view.scale);
+  ctx.fillStyle = '#8a8a84';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1;
+  for (const p of pillars) {
+    const q = P(p);
+    ctx.fillRect(q.x - pz / 2, q.y - pz / 2, pz, pz);
+    ctx.strokeRect(q.x - pz / 2, q.y - pz / 2, pz, pz);
+  }
+  // Hauteur libre insuffisante
+  ctx.strokeStyle = '#ff8c00';
+  ctx.lineWidth = 3;
+  for (const p of conflicts) {
+    const q = P(p);
+    ctx.beginPath(); ctx.arc(q.x, q.y, 10, 0, Math.PI * 2); ctx.stroke();
+  }
+  // Extrémités raccordables
+  if (mode === 'draw') {
+    ctx.strokeStyle = '#1a9e3a';
+    ctx.lineWidth = 2.5;
+    for (const s of strokes) {
+      if (s.closed || s.ctrl.length < 2) continue;
+      for (const i of [0, s.ctrl.length - 1]) {
+        const q = P(s.ctrl[i]);
+        ctx.beginPath(); ctx.arc(q.x, q.y, 7, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+  // Points de contrôle
+  if (mode === 'edit' || mode === 'level') {
+    strokes.forEach((s, si) => s.ctrl.forEach((q, i) => {
+      if (!ptVisible(s, i)) return;
+      const z = P(q);
+      const isSel = sel && sel.s === si && sel.i === i;
+      ctx.beginPath();
+      ctx.arc(z.x, z.y, isSel ? 6 : 4, 0, Math.PI * 2);
+      ctx.fillStyle = isSel ? '#1e6fff' : (s.lev[i] === 1 ? '#8fb8ff' : '#fff');
+      ctx.strokeStyle = '#1e6fff';
+      ctx.lineWidth = 1.5;
+      ctx.fill();
+      ctx.stroke();
+    }));
+  }
+  ctx.fillStyle = '#e00';
+  for (const p of bad) {
+    if (!zVisible(p.z || 0)) continue;
+    const q = P(p);
+    ctx.beginPath();
+    ctx.arc(q.x, q.y, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ---------- Vue 3D (Three.js) ----------
+let three = null;
+function sizeThree() {
+  const host = $('v3d'), w = host.clientWidth, h = host.clientHeight;
+  three.renderer.setSize(w, h, false);
+  three.camera.aspect = w / h;
+  three.camera.updateProjectionMatrix();
+}
+function init3D() {
+  const host = $('v3d');
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));   // téléphone : pas plus de 2× (fluidité, batterie)
+  host.insertBefore(renderer.domElement, $('close3d'));
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xdfe6ee);
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.02, 1000);
+  const controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
+  const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+  sun.position.set(5, 10, 7);
+  scene.add(sun);
+  three = { renderer, scene, camera, controls, group: new THREE.Group(), ground: null };
+  scene.add(three.group);
+  three.running = false;
+}
+// Boucle d'affichage 3D : s'arrête d'elle-même quand on revient en 2D (sinon le téléphone calcule en continu)
+function start3DLoop() {
+  if (!three || three.running) return;
+  three.running = true;
+  (function loop() {
+    if (!is3DOpen()) { three.running = false; return; }
+    requestAnimationFrame(loop);
+    three.controls.update();
+    three.renderer.render(three.scene, three.camera);
+  })();
+}
+function meshFrom(pos, idx, mat) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
+function addInstanced(group, list, mat, place) {
+  if (!list.length) return;
+  const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), mat, list.length);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), pos = new THREE.Vector3(), sc = new THREE.Vector3();
+  list.forEach((it, i) => { place(it, pos, sc); m.compose(pos, q, sc); im.setMatrixAt(i, m); });
+  im.instanceMatrix.needsUpdate = true;
+  group.add(im);
+}
+// Une barrière pleine : mur continu de la chaussée jusqu'au haut de la glissière, avec dessus et bouts fermés
+function buildRail(s, side, a, b, posts, RP, RI) {
+  if (b - a < 1) return;
+  const c = s.curve, rp = side > 0 ? s.railPL : s.railPR, h = WALL_T / 2;
+  const pts = [];
+  for (let j = a; j <= b; j++) {
+    const n = s.nrm[j], z = c[j].z + 0.002;
+    pts.push({ ox: rp[j].x + n.x * h * side, oy: rp[j].y + n.y * h * side,      // face extérieure
+               ix: rp[j].x - n.x * h * side, iy: rp[j].y - n.y * h * side,      // face côté piste
+               zb: z, zt: z + RAIL_TOP });
+  }
+  const strip = (A, B) => {                                    // bande entre deux lignes de points (x, y, z)
+    const base = RP.length / 3;
+    for (let k = 0; k < pts.length; k++) { const p = A(pts[k]), q = B(pts[k]); RP.push(p[0], p[2], p[1], q[0], q[2], q[1]); }
+    for (let k = 0; k < pts.length - 1; k++) { const i = base + 2 * k; RI.push(i, i + 1, i + 2, i + 1, i + 3, i + 2); }
+  };
+  strip(p => [p.ox, p.oy, p.zb], p => [p.ox, p.oy, p.zt]);      // face extérieure
+  strip(p => [p.ix, p.iy, p.zb], p => [p.ix, p.iy, p.zt]);      // face côté piste
+  strip(p => [p.ox, p.oy, p.zt], p => [p.ix, p.iy, p.zt]);      // dessus
+  for (const p of [pts[0], pts[pts.length - 1]]) {             // bouts fermés
+    const base = RP.length / 3;
+    RP.push(p.ox, p.zb, p.oy, p.ox, p.zt, p.oy, p.ix, p.zt, p.iy, p.ix, p.zb, p.iy);
+    RI.push(base, base + 1, base + 2, base, base + 2, base + 3);
+  }
+}
+function rebuild3D(T = three) {
+  if (!T) return;
+  const L = num('espL'), W = num('espW'), g = T.group;
+  while (g.children.length) {
+    const o = g.children.pop();
+    if (o.geometry) o.geometry.dispose();
+    if (o.material) o.material.dispose();
+  }
+  if (!T.ground) {
+    const gm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshLambertMaterial({ color: 0xeeeeea }));
+    gm.rotation.x = -Math.PI / 2;
+    T.scene.add(gm);
+    T.ground = gm;
+  }
+  T.ground.material.color.set($('solCol').value || '#eeeeea');
+  T.ground.scale.set(L, W, 1);
+  T.ground.position.set(L / 2, 0, W / 2);
+
+  const matTop = new THREE.MeshLambertMaterial({ color: 0x3a3a3a, side: THREE.DoubleSide });
+  const matSide = new THREE.MeshLambertMaterial({ color: 0xa8a8a0, side: THREE.DoubleSide });
+  const matRail = new THREE.MeshLambertMaterial({ color: 0xe4e6e8, side: THREE.DoubleSide });
+  const matPost = new THREE.MeshLambertMaterial({ color: 0x6f7378 });
+  const matPil = new THREE.MeshLambertMaterial({ color: 0x9a9a94 });
+  const posts = [], RP = [], RI = [];
+
+  for (const s of strokes) {
+    const c = s.curve, n = c.length, h = s.w / 2;
+    if (n < 2) continue;
+    // Tablier : dessus sombre + côtés et dessous en béton
+    const TP = [], TI = [], SP = [], SI = [];
+    for (let j = 0; j < n; j++) {
+      const nr = s.nrm[j], z = c[j].z, yt = z + 0.004, yb = Math.max(0, z - DECK);
+      const lx = s.edgeL[j].x, ly = s.edgeL[j].y, rx = s.edgeR[j].x, ry = s.edgeR[j].y;
+      TP.push(lx, yt, ly, rx, yt, ry);
+      SP.push(lx, yt, ly, rx, yt, ry, lx, yb, ly, rx, yb, ry);
+    }
+    for (let j = 0; j < n - 1; j++) {
+      const a = 2 * j;
+      TI.push(a, a + 1, a + 2, a + 1, a + 3, a + 2);
+      const k = 4 * j, k2 = k + 4;
+      SI.push(k, k + 2, k2, k + 2, k2 + 2, k2,
+              k + 1, k + 3, k2 + 1, k + 3, k2 + 3, k2 + 1,
+              k + 2, k + 3, k2 + 2, k + 3, k2 + 3, k2 + 2);
+    }
+    g.add(meshFrom(TP, TI, matTop));
+    g.add(meshFrom(SP, SI, matSide));
+    // Axe
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(c.map(p => new THREE.Vector3(p.x, p.z + 0.007, p.y))),
+      new THREE.LineDashedMaterial({ color: 0xffd400, dashSize: 0.1, gapSize: 0.08 }));
+    line.computeLineDistances();
+    g.add(line);
+    // Glissières
+    for (const side of [1, -1]) {
+      const f = side > 0 ? s.railL : s.railR;
+      let st = -1;
+      for (let j = 0; j <= n; j++) {
+        const on = j < n && f[j];
+        if (on && st < 0) st = j;
+        if (!on && st >= 0) { buildRail(s, side, st, j - 1, posts, RP, RI); st = -1; }
+      }
+    }
+  }
+  for (const f of fillets) if (f.rail) {                      // barrière le long de l'arrondi
+    const ps = { curve: f.railPts.map(() => ({ z: f.z })), railPL: f.railPts, nrm: f.railPts.map(q => ({ x: q.nx, y: q.ny })) };
+    buildRail(ps, 1, 0, f.railPts.length - 1, posts, RP, RI);
+  }
+  if (RI.length) g.add(meshFrom(RP, RI, matRail));
+  // raccords : surface de chaussée (éventail depuis le coin, toujours visible depuis ce coin)
+  if (fillets.length) {
+    const FP = [], FI = [];
+    for (const f of fillets) {
+      const base = FP.length / 3, y = f.z + 0.004;
+      for (const q of f.poly) FP.push(q.x, y, q.y);
+      for (let i = 1; i < f.poly.length - 1; i++) FI.push(base, base + i, base + i + 1);
+    }
+    g.add(meshFrom(FP, FI, matTop));
+  }
+  kerbs3D(g);
+  marks3D(g);
+  addInstanced(g, posts, matPost, (p, pos, sc) => { pos.set(p.x, p.z + RAIL_TOP / 2, p.y); sc.set(POST_W, RAIL_TOP, POST_W); });
+  const ps = Math.max(0.01, num('pSec'));
+  addInstanced(g, pillars, matPil, (p, pos, sc) => { pos.set(p.x, p.h / 2, p.y); sc.set(ps, Math.max(0.001, p.h), ps); });
+}
+function open3D() {
+  if (!three) init3D();
+  $('v3d').style.display = 'block';
+  sizeThree();
+  rebuild3D();
+  const L = num('espL'), W = num('espW'), m = Math.max(L, W);
+  three.controls.target.set(L / 2, 0, W / 2);
+  three.camera.position.set(L / 2, m * 0.6, W / 2 + m * 0.8);
+  three.camera.lookAt(L / 2, 0, W / 2);
+  start3DLoop();
+}
+function is3DOpen() { return $('v3d').style.display === 'block'; }
+
+// ---------- Interface ----------
+function update() {
+  analyse();
+  draw();
+  scheduleSave();
+  updateModelInfo();
+  if (is3DOpen() && three) rebuild3D();
+  $('rlInfo').textContent = $('railMode').value === 'manual' ? `Glissières posées : ${railsLength().toFixed(1)} m (niveau 1 et rampes compris).` : 'Mode automatique : choisis « Placées à la main » pour utiliser le pinceau.';
+  if (!tiles) { $('info').innerHTML = 'Trace un trait sur le plan.'; updatePointPanel(); return; }
+  const ech = num('echelle');
+  const bw = bbox.x1 - bbox.x0, bh = bbox.y1 - bbox.y0;
+  const nClosed = strokes.filter(s => s.closed).length;
+  let txt =
+    `Tracés : ${strokes.length} (${nClosed} bouclé${nClosed > 1 ? 's' : ''})<br>` +
+    `Longueur : ${totalLen.toFixed(1)} m (réel)<br>` +
+    `Emprise : ${bw.toFixed(2)} × ${bh.toFixed(2)} m<br>` +
+    (modelScale() ? `Maquette 3MF : ${(bw * modelScale().S).toFixed(0)} × ${(bh * modelScale().S).toFixed(0)} mm (≈ 1/${Math.round(1000 / modelScale().S)})<br>` : '') +
+    (kerbs.length ? `Vibreurs : ${kerbLen().toFixed(1)} m<br>` : '') +
+    `Points sous le rayon min. : <b style="color:${bad.length ? '#c00' : '#080'}">${bad.length}</b>`;
+  if (strokes.some(s => s.lev.some(l => l === 1))) {
+    txt += `<br><b>Niveau 1</b> : ${H2().toFixed(2)} m, pente ${slope()}° → rampe de ${rampLen().toFixed(2)} m`;
+    txt += `<br>Pieds : ${pillars.length}` + (blocked.length ? ` (${blocked.length} écartés au-dessus d'une piste)` : '');
+    if (maxSpan > 0) txt += `<br>Portée max. entre deux pieds : ${maxSpan.toFixed(2)} m`;
+    if (isFinite(minClear)) {
+      const ok = minClear >= num('clear');
+      txt += `<br>Hauteur libre au croisement : <b style="color:${ok ? '#080' : '#c00'}">${(minClear * 100).toFixed(0)} cm</b>`;
+      if (conflicts.length) txt += ` (${conflicts.length} zone${conflicts.length > 1 ? 's' : ''} trop basse${conflicts.length > 1 ? 's' : ''})`;
+    }
+  }
+  if (sel && strokes[sel.s]) {
+    const s = strokes[sel.s];
+    txt += `<br>Tracé sélectionné : voie ${s.w.toFixed(2)} m, ${s.closed ? 'bouclé' : 'ouvert'}, point au niveau ${s.lev[sel.i] + 1}`;
+  }
+  $('info').innerHTML = txt;
+  updatePointPanel();
+}
+// Boutons « Point sélectionné » : actifs seulement avec un point choisi en mode Éditer
+function updatePointPanel() {
+  const ok = mode === 'edit' && sel && strokes[sel.s] && strokes[sel.s].ctrl[sel.i];
+  ['lev1', 'lev2', 'delPt'].forEach(id => { $(id).disabled = !ok; });
+  const lv = ok ? strokes[sel.s].lev[sel.i] : -1;
+  $('lev1').classList.toggle('active', lv === 0);
+  $('lev2').classList.toggle('active', lv === 1);
+  $('ptHint').innerHTML = ok
+    ? `Point n° ${sel.i + 1} du tracé ${sel.s + 1} — actuellement <b>${lv === 1 ? 'en hauteur (niveau 1)' : 'au sol (niveau 0)'}</b>.`
+    : 'Passe en mode <b>✋ Éditer</b> puis clique sur un point (rond bleu) du tracé pour le sélectionner.';
+}
+function setMode(m) {
+  mode = m; sel = null; current = null; drag = null;
+  ['draw', 'edit', 'erase', 'level', 'move', 'mark', 'kerb', 'rail'].forEach(k => $('m-' + k).classList.toggle('active', k === m));
+  selMark = -1; syncMarkPanel();
+  showTabsFor(m);
+  update();
+}
+
+// Onglets affichés selon l'outil choisi (Fichier et Aide restent toujours visibles) ;
+// le premier de la liste (onglet principal de l'outil) s'ouvre à chaque changement d'outil.
+const MODE_TABS = {
+  draw:  ['t-track', 't-levels'],          // largeur de voie, lissage, niveau des nouveaux tracés
+  edit:  ['t-edit', 't-track', 't-levels'],
+  erase: ['t-edit'],
+  level: ['t-levels', 't-edit'],           // hauteur, pente, niveau travaillé
+  move:  ['t-track'],
+  kerb:  ['t-kerb', 't-edit'],
+  rail:  ['t-rail', 't-edit'],             // réglages vibreurs, niveau travaillé
+  mark:  ['t-mark', 't-edit']
+};
+function showTabsFor(m) {
+  const need = new Set([...(MODE_TABS[m] || []), 't-file', 't-help']);
+  const tabs = [...document.querySelectorAll('#tabs .tab')];
+  tabs.forEach(t => { t.style.display = need.has(t.dataset.tab) ? '' : 'none'; });
+  const first = tabs.find(t => t.dataset.tab === (MODE_TABS[m] || [])[0]);   // l'onglet principal de l'outil s'ouvre toujours
+  if (first && !first.classList.contains('active')) first.click();
+}
+
+// ---------- Zoom à la molette ----------
+cv.addEventListener('wheel', e => {
+  e.preventDefault();
+  const f = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+  const ns = Math.max(5, Math.min(400, view.scale * f));
+  const k = ns / view.scale;
+  const r = cv.getBoundingClientRect();
+  const mx = e.clientX - r.left, my = e.clientY - r.top;
+  view.ox = mx - (mx - view.ox) * k;
+  view.oy = my - (my - view.oy) * k;
+  view.scale = ns;
+  view.fitted = false;
+  draw();
+}, { passive: false });
+
+// ---------- Souris ----------
+cv.addEventListener('contextmenu', e => e.preventDefault());
+let lastPtr = 'mouse';
+function onDown(e) {
+  if (e.pointerType) lastPtr = e.pointerType;
+  if (e.button === 1) {
+    e.preventDefault();
+    drag = { type: 'pan', cx: e.clientX, cy: e.clientY };
+    return;
+  }
+  const p = world(e);
+  if (e.button === 2) {
+    if (mode === 'edit') deletePoint(findPoint(p));
+    if (mode === 'kerb' || mode === 'rail') { snap(); drag = { type: mode, neg: true, last: null }; kerbPaint(p); update(); return; }   // clic droit (ou appui long au doigt) = supprimer
+    if (mode === 'mark') { const i = findMark(p); if (i >= 0) { snap(); marks.splice(i, 1); selMark = -1; syncMarkPanel(); update(); } }
+    return;
+  }
+  if (e.button === 0 && mode === 'mark') {
+    let i = findMark(p);
+    snap();
+    if (i < 0) i = placeMark(p);
+    if (i < 0) { history.pop(); selMark = -1; syncMarkPanel(); draw(); return; }   // clic hors piste : désélection
+    selMark = i;
+    drag = { type: 'mark', i, dx: marks[i].x - p.x, dy: marks[i].y - p.y };
+    syncMarkPanel();
+    update();
+    return;
+  }
+  if (e.button !== 0) return;
+  if (mode === 'draw') {
+    const j = findEnd(p, snapDist(), null);
+    const start = j ? { ...strokes[j.s].ctrl[j.end === 'end' ? strokes[j.s].ctrl.length - 1 : 0] } : p;
+    current = { pts: [start], join: j };
+    return;
+  }
+  if (mode === 'kerb' || mode === 'rail') {
+    // souris : clic gauche = ajouter ; doigt ou stylet : selon le choix « Au doigt » de l'onglet
+    const neg = e.pointerType === 'mouse' ? false : $(mode === 'kerb' ? 'kbTool' : 'rlTool').value === 'del';
+    snap(); drag = { type: mode, neg, last: null }; kerbPaint(p); update(); return;
+  }
+  if (mode === 'move') { snap(); drag = { type: 'move', last: p }; return; }
+  if (mode === 'level') { snap(); drag = { type: 'level' }; paintStart(p); update(); return; }
+  if (mode === 'edit') {
+    const hit = findPoint(p);
+    if (hit) {
+      snap();
+      sel = hit;
+      drag = { type: 'point', s: hit.s, i: hit.i };
+    } else {
+      const sg = findSegment(p);
+      if (sg) {
+        snap();
+        const s = strokes[sg.s];
+        s.ctrl.splice(sg.k + 1, 0, { x: p.x, y: p.y });
+        s.lev.splice(sg.k + 1, 0, s.lev[sg.k]);
+        rebuild(s);
+        sel = { s: sg.s, i: sg.k + 1 };
+        drag = { type: 'point', s: sel.s, i: sel.i };
+      } else {
+        sel = null;
+      }
+    }
+    update();
+    return;
+  }
+  if (mode === 'erase') { snap(); drag = { type: 'erase' }; erase(p); update(); }
+}
+function onMove(e) {
+  if (drag && drag.type === 'pan') {
+    view.ox += e.clientX - drag.cx;
+    view.oy += e.clientY - drag.cy;
+    drag.cx = e.clientX; drag.cy = e.clientY;
+    view.fitted = false;
+    draw();
+    return;
+  }
+  const p = world(e);
+  if (mode === 'draw' && current) {
+    const l = current.pts[current.pts.length - 1];
+    if (dist(p, l) > 0.03) { current.pts.push(p); draw(); }
+    return;
+  }
+  if (mode === 'kerb' || mode === 'rail') { kbHover = p; if (!drag) { draw(); return; } }
+  if (!drag) return;
+  if (drag.type === 'kerb' || drag.type === 'rail') { kerbPaint(p); update(); return; }
+  if (drag.type === 'mark') {
+    const m = marks[drag.i];
+    m.x = p.x + drag.dx; m.y = p.y + drag.dy;
+    update();
+    return;
+  }
+  if (drag.type === 'move') {
+    const dx = p.x - drag.last.x, dy = p.y - drag.last.y;
+    strokes.forEach(s => { s.ctrl = s.ctrl.map(q => ({ x: q.x + dx, y: q.y + dy })); rebuild(s); });
+    marks.forEach(m => { m.x += dx; m.y += dy; });
+    kerbMask.forEach(k => { k.x += dx; k.y += dy; });
+    railMask.forEach(k => { k.x += dx; k.y += dy; });
+    strokes.forEach(computeRails);                         // les glissières suivent leur masque
+    drag.last = p;
+    update();
+  } else if (drag.type === 'point') {
+    const s = strokes[drag.s];
+    s.ctrl[drag.i] = { x: p.x, y: p.y };
+    rebuild(s);
+    update();
+  } else if (drag.type === 'erase') {
+    erase(p);
+    update();
+  } else if (drag.type === 'level') {
+    paintLevel(p);
+    update();
+  }
+}
+function onUp() {
+  if (mode === 'draw' && current && current.pts.length > 1) {
+    snap();
+    finishStroke(current.pts, current.join);
+  }
+  if (drag && drag.type === 'point' && strokes[drag.s]) {
+    const s = strokes[drag.s];
+    const n = s.ctrl.length, k0 = drag.i;
+    const near = i => { let d = Math.abs(i - k0); if (s.closed) d = Math.min(d, n - d); return d > 0 && d <= 2; };
+    s.ctrl = relax(s.ctrl, coef(), s.closed, i => near(i) && ptVisible(s, i));   // lissage local uniquement
+    rebuild(s);
+  }
+  current = null;
+  drag = null;
+  paintState = null;
+  update();
+}
+
+// ---------- Souris, stylet et doigt (Pointer Events : PC, iOS, Android) ----------
+// 1 doigt = souris ; 2 doigts = zoom par pincement + déplacement de la vue ;
+// appui long (0,65 s sans bouger) = clic droit (supprimer un point ou un marquage).
+const touches = new Map();
+let pinch = null, longPress = null, gestureHist = 0;
+function cancelGesture() {
+  // annule ce que le premier doigt avait commencé (trait, déplacement, gomme…)
+  current = null; drag = null; paintState = null;
+  if (history.length > gestureHist) undo(); else draw();
+}
+function startPinch() {
+  const [a, b] = [...touches.values()];
+  pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, scale: view.scale, ox: view.ox, oy: view.oy };
+}
+function doPinch() {
+  const [a, b] = [...touches.values()], r = cv.getBoundingClientRect();
+  const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  const ns = Math.max(5, Math.min(400, pinch.scale * d / pinch.d)), k = ns / pinch.scale;
+  view.scale = ns;
+  view.fitted = false;
+  view.ox = (mx - r.left) - ((pinch.mx - r.left) - pinch.ox) * k;
+  view.oy = (my - r.top) - ((pinch.my - r.top) - pinch.oy) * k;
+  draw();
+}
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  try { cv.setPointerCapture(e.pointerId); } catch (err) { /* sans importance */ }
+  if (e.pointerType === 'touch') {
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (touches.size >= 2) {
+      if (longPress) { clearTimeout(longPress.t); longPress = null; }
+      if (!pinch) { cancelGesture(); startPinch(); }
+      return;
+    }
+    gestureHist = history.length;
+    const ev = { button: 2, longPress: true, clientX: e.clientX, clientY: e.clientY, preventDefault() {} };
+    longPress = { x: e.clientX, y: e.clientY, t: setTimeout(() => { longPress = null; cancelGesture(); onDown(ev); }, 650) };
+  }
+  onDown(e);
+});
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch') {
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (longPress && Math.hypot(e.clientX - longPress.x, e.clientY - longPress.y) > 8) { clearTimeout(longPress.t); longPress = null; }
+    if (pinch) { if (touches.size >= 2) doPinch(); return; }
+  }
+  onMove(e);
+});
+function onPointerEnd(e) {
+  if (e.pointerType === 'touch') {
+    touches.delete(e.pointerId);
+    if (longPress) { clearTimeout(longPress.t); longPress = null; }
+    if (pinch) { if (touches.size === 0) pinch = null; return; }   // fin du pincement : aucune action
+  }
+  onUp();
+}
+cv.addEventListener('pointerup', onPointerEnd);
+cv.addEventListener('pointercancel', onPointerEnd);
+// La zone de dessin change de taille (rotation du téléphone, menu replié…) : on redimensionne
+if (window.ResizeObserver) new ResizeObserver(() => { resizeCanvas(); if (view.fitted) fit(); draw(); }).observe($('main'));
+$('menuToggle').onclick = () => {
+  const c = $('panel').classList.toggle('collapsed');
+  $('menuToggle').textContent = c ? '☰ Menu ▾' : '☰ Menu ▴';      // replié : la flèche indique qu'il se déroule vers le bas
+};
+
+// ---------- Clavier ----------
+window.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (mode === 'mark' && selMark >= 0) {
+    if (e.key === 'Delete' || e.key === 'Backspace') { $('mkDel').click(); return; }
+    if (e.key.toLowerCase() === 'r') { rotMark(e.shiftKey ? -15 : 15); return; }
+  }
+  if ((e.key === 'Delete' || e.key === 'Backspace') && sel) deletePoint(sel);
+  if (e.key === '0' && sel) setPointLevel(0);
+  if (e.key === '1' && sel) setPointLevel(1);
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); undo(); }
+});
+
+// ---------- Boutons et réglages ----------
+function needSel() {
+  if (sel && strokes[sel.s]) return strokes[sel.s];
+  $('info').innerHTML += '<br><i>Sélectionne d\'abord un point du tracé (mode Éditer).</i>';
+  return null;
+}
+$('m-draw').onclick = () => setMode('draw');
+$('m-edit').onclick = () => setMode('edit');
+$('m-erase').onclick = () => setMode('erase');
+$('m-level').onclick = () => setMode('level');
+$('m-move').onclick = () => setMode('move');
+$('m-rail').onclick = () => setMode('rail');
+$('m-kerb').onclick = () => { setMode('kerb'); document.querySelector('[data-tab=t-kerb]').click(); };
+$('m-mark').onclick = () => { setMode('mark'); document.querySelector('[data-tab=t-mark]').click(); };   // ouvre aussi l'onglet Marquage
+$('undo').onclick = undo;
+$('fit').onclick = () => { fit(); draw(); };
+$('view3d').onclick = () => { open3D(); };
+$('close3d').onclick = () => { $('v3d').style.display = 'none'; };
+$('clear-all').onclick = () => { snap(); strokes = []; marks = []; kerbMask = []; railMask = []; sel = null; selMark = -1; syncMarkPanel(); update(); };
+$('lev1').onclick = () => setPointLevel(0);
+$('delPt').onclick = () => { if (sel) deletePoint(sel); else updatePointPanel(); };
+$('lev2').onclick = () => setPointLevel(1);
+$('applyW').onclick = () => {
+  const s = needSel(); if (!s) return;
+  snap(); s.w = num('voie'); rebuild(s); update();
+};
+$('relax').onclick = () => {
+  const s = needSel(); if (!s) return;
+  snap(); s.ctrl = relax(s.ctrl, coef(), s.closed, i => ptVisible(s, i)); rebuild(s); update();
+};
+$('loop').onclick = () => {
+  const s = needSel(); if (!s) return;
+  if (!s.closed && s.ctrl.length < 3) { $('info').innerHTML += '<br><i>Il faut au moins 3 points pour boucler.</i>'; return; }
+  snap(); s.closed = !s.closed; rebuild(s); update();
+};
+$('espL').addEventListener('input', () => { fit(); update(); });
+$('espW').addEventListener('input', () => { fit(); update(); });
+['h2', 'pente'].forEach(id => $(id).addEventListener('input', () => { rebuildAll(); update(); }));
+$('railMode').addEventListener('change', () => { rebuildAll(); update(); });
+$('rfil').addEventListener('input', () => update());
+$('solCol').addEventListener('input', () => update());
+document.querySelectorAll('.solPre').forEach(b => b.onclick = () => { $('solCol').value = b.dataset.c; update(); });
+// Changer de niveau travaillé : les nouveaux tracés vont sur ce niveau, la sélection est remise à zéro
+$('workLev').addEventListener('change', () => {
+  const w = workLev();
+  $('drawLev').value = w === 'all' ? '0' : w;                 // « Tous » : on retrace au sol par défaut
+  sel = null;
+  update();
+});
+$('ghost').addEventListener('change', () => draw());
+['echelle', 'rmin', 'gomme', 'voie', 'lissage', 'clear', 'pSp', 'pSec'].forEach(id =>
+  $(id).addEventListener('input', () => update()));
+window.addEventListener('resize', () => {
+  resizeCanvas();
+  draw();
+  if (is3DOpen() && three) sizeThree();
+});
+
+// ===================================================================
+// ---------- Fichiers : sauvegarde du projet, plan PDF, maquette 3MF ----------
+// ===================================================================
+const PARAM_IDS = ['mSocle', 'solCol', 'rfil', 'rlBrush', 'espL', 'espW', 'voie', 'rmin', 'lissage', 'railMode', 'echelle', 'h2', 'pente', 'clear', 'pSp', 'pSec', 'gomme', 'kbBrush', 'kbW', 'kbL', 'kbH', 'kbBev', 'kbAng', 'mMax'];
+const stamp = () => new Date().toISOString().slice(0, 10);
+function projectData() {
+  const params = {};
+  PARAM_IDS.forEach(id => params[id] = $(id).value);
+  return {
+    app: 'piste-drift-rc', version: 3, appVersion: APP_VERSION, date: new Date().toISOString(), params,
+    strokes: strokes.map(s => ({ ctrl: s.ctrl, lev: s.lev, w: s.w, closed: s.closed })),
+    marks,
+    kerbs: kerbMask,
+    rails: railMask
+  };
+}
+function loadProject(d, withUndo = true) {
+  if (!d || !Array.isArray(d.strokes)) throw new Error('fichier non reconnu');
+  if (withUndo) snap();
+  // projets antérieurs : l'ancien réglage par défaut « extérieur de la boucle » devient « extérieur des virages »
+  if ((d.version || 1) < 2 && d.params && d.params.railMode === 'ext') d.params.railMode = 'turns';
+  Object.entries(d.params || {}).forEach(([k, v]) => { if (PARAM_IDS.includes(k)) $(k).value = v; });
+  marks = (d.marks || []).map(m => ({ ...m, x: +m.x, y: +m.y }));
+  kerbMask = (d.kerbs || []).map(k => ({ x: +k.x, y: +k.y, r: +k.r, lv: k.lv || 'all', neg: !!k.neg }));
+  selMark = -1;
+  strokes = d.strokes.map(s => ({
+    ctrl: s.ctrl.map(p => ({ x: +p.x, y: +p.y })),
+    lev: (s.lev || []).map(Number), w: +s.w || num('voie'), closed: !!s.closed
+  }));
+  railMask = (d.rails || []).map(k => ({ x: +k.x, y: +k.y, r: +k.r, lv: k.lv || 'all', neg: !!k.neg }));
+  rebuildAll();
+  // projets antérieurs (glissières automatiques) : on garde les mêmes glissières, mais en masque modifiable à la main
+  if ((d.version || 1) < 3) {
+    if ($('railMode').value !== 'none') railsToMask();
+    $('railMode').value = 'manual';
+    rebuildAll();
+  }
+  sel = null;
+  fit();
+  update();
+}
+function download(name, data, type) {
+  const blob = data instanceof Blob ? data : new Blob([data], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 3000);
+}
+function fileMsg(t) { $('fileMsg').textContent = t; }
+
+// Sauvegarde automatique dans le navigateur (la piste revient à la réouverture du fichier)
+let saveTimer = null;
+function scheduleSave() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try { localStorage.setItem('piste-drift-rc', JSON.stringify(projectData())); } catch (e) { /* stockage indisponible */ }
+  }, 600);
+}
+function flushSave() {
+  clearTimeout(saveTimer);
+  try { localStorage.setItem('piste-drift-rc', JSON.stringify(projectData())); } catch (e) { /* stockage indisponible */ }
+}
+window.addEventListener('pagehide', flushSave);              // fermeture de l'onglet : on enregistre tout de suite
+window.addEventListener('beforeunload', flushSave);
+function restoreAutosave() {
+  try {
+    const raw = localStorage.getItem('piste-drift-rc');
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.strokes && d.strokes.length) { loadProject(d, false); fileMsg('Dernière piste restaurée automatiquement.'); }
+  } catch (e) { /* rien à restaurer */ }
+}
+
+// ---------- Tuiles : même découpe pour le PDF et la maquette ----------
+function tileGrid() {
+  if (!bbox) return null;
+  const tm = TILE_MM / 1000 * num('echelle');                // taille d'une tuile, en mètres réels
+  const nx = Math.max(1, Math.ceil((bbox.x1 - bbox.x0) / tm - 1e-9));
+  const ny = Math.max(1, Math.ceil((bbox.y1 - bbox.y0) / tm - 1e-9));
+  return { x0: bbox.x0, y0: bbox.y0, x1: bbox.x1, y1: bbox.y1, tm, nx, ny };
+}
+const tileName = (i, j) => String.fromCharCode(65 + (i % 26)) + (i >= 26 ? Math.floor(i / 26) : '') + (j + 1);
+
+// Portions de piste triées par hauteur (comme à l'écran)
+function heightRuns() {
+  const H = H2(), BINS = 6, runs = [];
+  const bin = z => H > 0 ? Math.round(Math.min(1, Math.max(0, z) / H) * BINS) : 0;
+  for (const s of strokes) {
+    const c = s.curve, n = c.length;
+    if (n < 2) continue;
+    let st = 0, b = bin(c[0].z);
+    for (let j = 1; j < n; j++) {
+      const bj = bin(c[j].z);
+      if (bj !== b) { runs.push({ s, a: st, b: j, bin: b }); st = j; b = bj; }
+    }
+    runs.push({ s, a: st, b: n - 1, bin: b });
+  }
+  runs.sort((x, y) => x.bin - y.bin);
+  return { runs, BINS, bin };
+}
+
+// ---------- Dossier PDF : vue 2D cotée, vue 3D, quadrillage, résumé (écrit à la main, sans bibliothèque) ----------
+const fx = v => (+v).toFixed(2);
+const fr = (v, d = 2) => (+v).toFixed(d).replace('.', ',');      // nombres à la française
+function makePage(PW, PH) {
+  const ops = [];
+  const P = {
+    PW, PH, ops,
+    col(hex, stroke) {
+      const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+      ops.push(`${r.toFixed(3)} ${g.toFixed(3)} ${b.toFixed(3)} ${stroke ? 'RG' : 'rg'}`);
+    },
+    lw(w) { ops.push(`${fx(w)} w`); },
+    dash(a) { ops.push(a ? `[${a.join(' ')}] 0 d` : '[] 0 d'); },
+    seg(x1, y1, x2, y2) { ops.push(`${fx(x1)} ${fx(y1)} m ${fx(x2)} ${fx(y2)} l S`); },
+    poly(pts, mode = 'S') { if (pts.length < 2) return; ops.push(pts.map((p, i) => `${fx(p[0])} ${fx(p[1])} ${i ? 'l' : 'm'}`).join(' ') + ' ' + mode); },
+    rect(x, y, w, h, mode = 'S') { ops.push(`${fx(x)} ${fx(y)} ${fx(w)} ${fx(h)} re ${mode}`); },
+    circle(x, y, r, mode = 'S') {
+      const k = 0.5523 * r;
+      ops.push(`${fx(x + r)} ${fx(y)} m ${fx(x + r)} ${fx(y + k)} ${fx(x + k)} ${fx(y + r)} ${fx(x)} ${fx(y + r)} c ` +
+        `${fx(x - k)} ${fx(y + r)} ${fx(x - r)} ${fx(y + k)} ${fx(x - r)} ${fx(y)} c ` +
+        `${fx(x - r)} ${fx(y - k)} ${fx(x - k)} ${fx(y - r)} ${fx(x)} ${fx(y - r)} c ` +
+        `${fx(x + k)} ${fx(y - r)} ${fx(x + r)} ${fx(y - k)} ${fx(x + r)} ${fx(y)} c ${mode}`);
+    },
+    textW(t, size, bold) { return t.length * size * (bold ? 0.56 : 0.52); },
+    text(x, y, size, t, bold, align) {
+      const w = P.textW(t, size, bold), dx = align === 'c' ? -w / 2 : align === 'r' ? -w : 0;
+      ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${fx(x + dx)} ${fx(y)} Td (${pdfText(t)}) Tj ET`);
+    },
+    // étiquette : texte sur un cartouche blanc, lisible même posé sur la piste
+    tag(x, y, size, t, hex, align = 'c') {
+      const w = P.textW(t, size, true) + 8, dx = align === 'c' ? -w / 2 : align === 'r' ? -w : 0;
+      P.col('#ffffff', false); P.rect(x + dx, y - 3, w, size + 5, 'f');
+      P.lw(0.6); P.col(hex, true); P.rect(x + dx, y - 3, w, size + 5);
+      P.col(hex, false); P.text(x + dx + 4, y, size, t, true);
+    },
+    // texte tourné de 90° (cotes verticales)
+    textV(x, y, size, t) {
+      const w = P.textW(t, size);
+      ops.push(`BT /F1 ${size} Tf 0 1 -1 0 ${fx(x)} ${fx(y - w / 2)} Tm (${pdfText(t)}) Tj ET`);
+    }
+  };
+  return P;
+}
+function pdfText(t) {
+  const special = { '—': 0x97, '–': 0x96, '’': 0x92, '×': 0xd7, '→': 0x3e, '°': 0xb0, '≈': 0x7e, '…': 0x85 };
+  let o = '';
+  for (const ch of t) {
+    const c = ch.charCodeAt(0);
+    if (ch === '(' || ch === ')' || ch === '\\') o += '\\' + ch;
+    else if (c < 32 || c > 126) { const code = special[ch] ?? (c < 256 ? c : 63); o += '\\' + code.toString(8).padStart(3, '0'); }
+    else o += ch;
+  }
+  return o;
+}
+// En-tête et pied de page communs
+function pageFrame(P, title, n, total) {
+  P.col('#222222', false); P.text(40, P.PH - 34, 15, title, true);
+  P.col('#666666', false);
+  P.text(40, P.PH - 50, 8.5, `Piste drift RC — espace ${fr(num('espL'), 1)} × ${fr(num('espW'), 1)} m — ${stamp()}`);
+  P.text(P.PW - 40, 22, 8, `Piste Drift RC ${APP_VERSION} \u2014 page ${n} / ${total}`, false, 'r');
+  P.col('#cccccc', true); P.lw(0.6); P.seg(40, P.PH - 58, P.PW - 40, P.PH - 58);
+}
+// Repère monde (mètres, Y vers le bas) → page (points, Y vers le haut)
+function viewMap(P, box, L, W) {
+  const k = Math.min(box.w / L, box.h / W);
+  const ox = box.x + (box.w - L * k) / 2, oy = box.y + (box.h - W * k) / 2;     // box.y = marge haute
+  return { k, X: x => ox + x * k, Y: y => P.PH - oy - y * k };
+}
+function drawGrid(P, V, L, W, labels) {
+  P.lw(0.3); P.col('#e4e4e4', true);
+  for (let x = 0.5; x < L; x += 1) P.seg(V.X(x), V.Y(0), V.X(x), V.Y(W));
+  for (let y = 0.5; y < W; y += 1) P.seg(V.X(0), V.Y(y), V.X(L), V.Y(y));
+  P.lw(0.55); P.col('#c2c2c2', true);
+  for (let x = 0; x <= L + 1e-9; x += 1) P.seg(V.X(x), V.Y(0), V.X(x), V.Y(W));
+  for (let y = 0; y <= W + 1e-9; y += 1) P.seg(V.X(0), V.Y(y), V.X(L), V.Y(y));
+  if (labels) {
+    P.col('#666666', false);
+    for (let x = 0; x <= L + 1e-9; x += 1) P.text(V.X(x), V.Y(0) + 5, 7, String(x), false, 'c');
+    for (let y = 0; y <= W + 1e-9; y += 1) P.text(V.X(0) - 5, V.Y(y) - 2.5, 7, String(y), false, 'r');
+  }
+  P.lw(1.1); P.col('#777777', true); P.rect(V.X(0), V.Y(W), L * V.k, W * V.k);
+}
+function drawTrack(P, V, axis = true) {
+  const { runs, BINS, bin } = heightRuns();
+  const c0 = [0x44, 0x44, 0x44], c1 = [0x24, 0x52, 0x7f];
+  // étage par étage : vibreurs et marquages d'un niveau sont recouverts par le niveau du dessus
+  const done = new Set();
+  const layer = b => { if (done.has(b)) return; done.add(b); kerbsPDF(P, V, z => bin(z) === b); marksPDF(P, V, z => bin(z) === b); };
+  const rgbOf = b => c0.map((v, i) => (v + (c1[i] - v) * b / BINS) / 255).map(v => v.toFixed(3)).join(' ');
+  const binList = [...new Set(runs.map(r => r.bin))].sort((a, b) => a - b);
+  for (const b of binList) {
+    const rb = runs.filter(r => r.bin === b);
+    for (const r of rb) {                                     // chaussées de l'étage
+      const s = r.s, c = s.curve;
+      P.ops.push('1 J 1 j', `${fx(s.w * V.k)} w`, `${rgbOf(b)} RG`);
+      P.poly(c.slice(r.a, r.b + 1).map(p => [V.X(p.x), V.Y(p.y)]));
+    }
+    P.ops.push(`${rgbOf(b)} rg`, `${rgbOf(b)} RG`, '0.5 w');   // raccords
+    for (const f of fillets) if (bin(f.z) === b) P.poly(f.poly.map(q => [V.X(q.x), V.Y(q.y)]), 'b');
+    P.ops.push('0 J'); P.lw(Math.max(0.5, 0.012 * V.k)); P.col('#8c959e', true);
+    for (const f of fillets) if (bin(f.z) === b && f.rail) P.poly(f.railPts.map(q => [V.X(q.x), V.Y(q.y)]));
+    for (const r of rb) pdfDetails(r);
+    layer(b);
+  }
+  function pdfDetails(r) {
+    const s = r.s, c = s.curve;
+    P.ops.push('0 J'); P.lw(Math.max(0.5, 0.012 * V.k)); P.col('#8c959e', true);
+    for (const side of [1, -1]) {
+      const f = side > 0 ? s.railL : s.railR, rp = side > 0 ? s.railPL : s.railPR;
+      let seg = [];
+      for (let j = r.a; j <= r.b + 1; j++) {
+        if (j <= r.b && f[j]) seg.push([V.X(rp[j].x), V.Y(rp[j].y)]);
+        else { if (seg.length > 1) P.poly(seg); seg = []; }
+      }
+    }
+    if (axis) {
+      P.ops.push('1 J'); P.lw(0.6); P.dash([3, 2.5]); P.col('#e0b400', true);
+      P.poly(c.slice(r.a, r.b + 1).map(p => [V.X(p.x), V.Y(p.y)]));
+      P.dash(null);
+    }
+  }
+  for (let b = 0; b <= BINS; b++) layer(b);
+  const ps = Math.max(0.01, num('pSec')), pz = Math.max(2.5, ps * V.k);
+  P.col('#7a7a74', false);
+  for (const p of pillars) P.rect(V.X(p.x) - pz / 2, V.Y(p.y) - pz / 2, pz, pz, 'f');
+}
+// Cote : ligne avec flèches, lignes de rappel et texte
+function dimH(P, x1, x2, y, label, ext) {
+  P.lw(0.5); P.col('#c0392b', true); P.col('#c0392b', false);
+  P.seg(x1, y, x2, y);
+  for (const [x, d] of [[x1, 1], [x2, -1]]) P.poly([[x, y], [x + 5 * d, y + 2], [x + 5 * d, y - 2]], 'f');
+  if (ext) { P.lw(0.3); P.dash([2, 2]); P.seg(x1, ext[0], x1, y); P.seg(x2, ext[1], x2, y); P.dash(null); }
+  if (Math.abs(x2 - x1) > 24) P.text((x1 + x2) / 2, y + 3, 7.5, label, false, 'c');
+}
+function dimV(P, y1, y2, x, label, ext) {
+  P.lw(0.5); P.col('#c0392b', true); P.col('#c0392b', false);
+  P.seg(x, y1, x, y2);
+  for (const [y, d] of [[y1, 1], [y2, -1]]) P.poly([[x, y], [x + 2, y + 5 * d], [x - 2, y + 5 * d]], 'f');
+  if (ext) { P.lw(0.3); P.dash([2, 2]); P.seg(ext[0], y1, x, y1); P.seg(ext[1], y2, x, y2); P.dash(null); }
+  if (Math.abs(y2 - y1) > 24) P.textV(x - 3, (y1 + y2) / 2, 7.5, label);
+}
+function trackExtent() {
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const s of strokes) for (const e of [s.edgeL, s.edgeR]) for (const p of e) {
+    x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y);
+  }
+  return isFinite(x0) ? { x0, x1, y0, y1 } : null;
+}
+// Points remarquables : virage le plus serré, rampes, niveau 1
+function trackFeatures() {
+  let rmin = Infinity, rAt = null;
+  const ramps = [], decks = [];
+  const H = H2();
+  for (const s of strokes) {
+    const d = decimate(s.curve, 0.3);
+    for (let i = 1; i < d.length - 1; i++) {
+      const r = radius(d[i - 1], d[i], d[i + 1]);
+      if (r < rmin) { rmin = r; rAt = d[i]; }
+    }
+    const c = s.curve;
+    let st = -1, kind = null;
+    for (let j = 0; j <= c.length; j++) {
+      const z = j < c.length ? c[j].z : -1;
+      const k = z < 0 ? null : z >= H * 0.98 && H > 0 ? 'deck' : z > Z_EPS ? 'ramp' : null;
+      if (k !== kind) {
+        if (kind && j - st > 3) (kind === 'deck' ? decks : ramps).push({ s, a: st, b: j - 1, mid: c[Math.floor((st + j - 1) / 2)] });
+        st = j; kind = k;
+      }
+    }
+  }
+  return { rmin, rAt, ramps, decks };
+}
+function railsLength() {
+  let L = 0;
+  for (const s of strokes) for (const side of [1, -1]) {
+    const f = side > 0 ? s.railL : s.railR, rp = side > 0 ? s.railPL : s.railPR;
+    for (let j = 1; j < rp.length; j++) if (f[j] && f[j - 1]) L += dist(rp[j], rp[j - 1]);
+  }
+  return L;
+}
+// Repères le long de l'axe (pour reporter la piste au sol)
+function landmarks() {
+  const step = totalLen > 80 ? 2 : 1, out = [];
+  let n = 0;
+  strokes.forEach(s => {
+    const T = s.S[s.S.length - 1];
+    for (let t = 0; t < T - 1e-6 || (!s.closed && t <= T + 1e-6); t += step) {
+      const j = idxAt(s, Math.min(t, T)), p = s.curve[j];
+      out.push({ n: ++n, x: p.x, y: p.y, z: p.z });
+      if (!s.closed && t >= T) break;
+    }
+  });
+  return { step, pts: out };
+}
+// Rendu de la vue 3D en image (Three.js hors écran) ; null si la 3D n'est pas disponible
+function render3DImage(w, h) {
+  if (typeof THREE === 'undefined' || !bbox) return null;
+  let renderer = null;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(w, h, false);
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0xffffff);
+    scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 1.0));
+    const sun = new THREE.DirectionalLight(0xffffff, 0.6);
+    sun.position.set(5, 10, 7);
+    scene.add(sun);
+    const T = { scene, group: new THREE.Group(), ground: null };
+    scene.add(T.group);
+    rebuild3D(T);
+    const cx = (bbox.x0 + bbox.x1) / 2, cy = (bbox.y0 + bbox.y1) / 2;
+    const size = Math.max(bbox.x1 - bbox.x0, bbox.y1 - bbox.y0, 1);
+    const cam = new THREE.PerspectiveCamera(32, w / h, 0.02, 1000);
+    cam.position.set(cx + size * 0.5, size * 0.68, cy + size * 0.95);
+    cam.lookAt(cx, 0, cy);
+    renderer.render(scene, cam);
+    const url = renderer.domElement.toDataURL('image/jpeg', 0.9);
+    T.group.children.forEach(o => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    const bin = atob(url.split(',')[1]), u8 = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+    return { data: u8, w, h };
+  } catch (e) {
+    return null;
+  } finally {
+    if (renderer) { renderer.dispose(); if (renderer.forceContextLoss) renderer.forceContextLoss(); }
+  }
+}
+// Assemblage binaire du PDF (pages vectorielles + une image JPEG facultative)
+function assemblePDF(pages, img) {
+  const bytes = s => { const u = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i) & 255; return u; };
+  const objs = [];                                              // chaque objet : liste de morceaux binaires
+  const pageIds = pages.map((_, i) => 6 + i * 2);
+  objs[1] = [bytes('<< /Type /Catalog /Pages 2 0 R >>')];
+  objs[2] = [bytes(`<< /Type /Pages /Kids [${pageIds.map(i => i + ' 0 R').join(' ')}] /Count ${pages.length} >>`)];
+  objs[3] = [bytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')];
+  objs[4] = [bytes('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>')];
+  objs[5] = img
+    ? [bytes(`<< /Type /XObject /Subtype /Image /Width ${img.w} /Height ${img.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${img.data.length} >>\nstream\n`), img.data, bytes('\nendstream')]
+    : [bytes('<< >>')];
+  pages.forEach((P, i) => {
+    const content = P.ops.join('\n');
+    objs[pageIds[i]] = [bytes(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${P.PW} ${P.PH}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >>${img ? ' /XObject << /Im1 5 0 R >>' : ''} >> /Contents ${pageIds[i] + 1} 0 R >>`)];
+    objs[pageIds[i] + 1] = [bytes(`<< /Length ${content.length} >>\nstream\n${content}\nendstream`)];
+  });
+  const parts = [bytes('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')];
+  let pos = parts[0].length;
+  const off = [];
+  for (let id = 1; id < objs.length; id++) {
+    off[id] = pos;
+    const head = bytes(`${id} 0 obj\n`), tail = bytes('\nendobj\n');
+    parts.push(head, ...objs[id], tail);
+    pos += head.length + objs[id].reduce((a, b) => a + b.length, 0) + tail.length;
+  }
+  let xref = `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
+  for (let id = 1; id < objs.length; id++) xref += String(off[id]).padStart(10, '0') + ' 00000 n \n';
+  xref += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${pos}\n%%EOF\n`;
+  parts.push(bytes(xref));
+  return new Blob(parts, { type: 'application/pdf' });
+}
+function buildPDF() {
+  const A3 = $('pdfFmt').value === 'A3';
+  const PW = A3 ? 1191 : 842, PH = A3 ? 842 : 595;              // paysage, en points
+  const L = num('espL'), W = num('espW'), TOTAL = 4;
+  const pages = [];
+  const ext = trackExtent(), feat = trackFeatures();
+
+  // ---- Page 1 : vue 2D cotée ----
+  {
+    const P = makePage(PW, PH);
+    pageFrame(P, 'Vue 2D cotée', 1, TOTAL);
+    const V = viewMap(P, { x: 95, y: 100, w: PW - 190, h: PH - 175 }, L, W);
+    drawGrid(P, V, L, W, false);
+    drawTrack(P, V, true);
+    const XL = V.X(0), XR = V.X(L), YT = V.Y(0), YB = V.Y(W);
+    dimH(P, XL, XR, YT + 22, `${fr(L)} m`, [YT, YT]);                // longueur de l'espace
+    dimV(P, YB, YT, XL - 22, `${fr(W)} m`, [XL, XL]);                // largeur de l'espace
+    if (ext) {
+      const ex0 = V.X(ext.x0), ex1 = V.X(ext.x1), ey0 = V.Y(ext.y0), ey1 = V.Y(ext.y1);
+      // chaîne de cotes en bas : mur gauche → piste → mur droit
+      const yb = YB - 20;
+      dimH(P, XL, ex0, yb, `${fr(ext.x0)} m`, [YB, YB]);
+      dimH(P, ex0, ex1, yb, `piste ${fr(ext.x1 - ext.x0)} m`, [ey1, YB]);
+      dimH(P, ex1, XR, yb, `${fr(L - ext.x1)} m`, [YB, YB]);
+      // chaîne de cotes à droite : mur haut → piste → mur bas
+      const xr = XR + 22;
+      dimV(P, ey0, YT, xr, `${fr(ext.y0)} m`, [XR, XR]);
+      dimV(P, ey1, ey0, xr, `piste ${fr(ext.y1 - ext.y0)} m`, [ex1, ex1]);
+      dimV(P, YB, ey1, xr, `${fr(W - ext.y1)} m`, [XR, XR]);
+    }
+    // largeur de voie (sur le premier tracé)
+    const s0 = strokes.find(s => s.curve.length > 10);
+    if (s0) {
+      const j = Math.floor(s0.curve.length * 0.1), p = s0.curve[j], nr = s0.nrm[j], h = s0.w / 2;
+      const a = [V.X(p.x + nr.x * h), V.Y(p.y + nr.y * h)], b = [V.X(p.x - nr.x * h), V.Y(p.y - nr.y * h)];
+      P.lw(0.8); P.col('#ffffff', true); P.seg(a[0], a[1], b[0], b[1]);
+      P.col('#ffffff', false); P.circle(a[0], a[1], 1.6, 'f'); P.circle(b[0], b[1], 1.6, 'f');
+      P.tag(b[0] + 6, b[1] - 3, 7.5, `voie ${fr(s0.w)} m`, '#c0392b', 'l');
+    }
+    // virage le plus serré
+    if (feat.rAt && isFinite(feat.rmin)) {
+      const x = V.X(feat.rAt.x), y = V.Y(feat.rAt.y);
+      P.lw(1); P.col('#c0392b', true); P.circle(x, y, 6);
+      P.tag(x + 9, y + 4, 7.5, `R mini ${fr(feat.rmin)} m`, '#c0392b', 'l');
+    }
+    // rampes et niveau 1
+    feat.decks.forEach(d => P.tag(V.X(d.mid.x), V.Y(d.mid.y) + 8, 7.5, `Niveau 1 : +${fr(H2() * 100, 0)} cm`, '#24527f'));
+    feat.ramps.forEach(r => P.tag(V.X(r.mid.x), V.Y(r.mid.y) - 14, 7, `rampe ${slope()}° — ${fr(rampLen())} m`, '#24527f'));
+    P.col('#555555', false);
+    P.text(40, 26, 7.5, 'Cotes en mètres. Origine : coin haut-gauche de l’espace. Quadrillage fin : 0,5 m.');
+    pages.push(P);
+  }
+
+  // ---- Page 2 : vue 3D ----
+  const img = render3DImage(1600, 1000);
+  {
+    const P = makePage(PW, PH);
+    pageFrame(P, 'Vue 3D', 2, TOTAL);
+    const bw = PW - 80, bh = PH - 110;
+    if (img) {
+      const sc = Math.min(bw / img.w, bh / img.h), w = img.w * sc, h = img.h * sc;
+      P.ops.push(`q ${fx(w)} 0 0 ${fx(h)} ${fx((PW - w) / 2)} ${fx(40)} cm /Im1 Do Q`);
+    } else {
+      P.col('#888888', false);
+      P.text(PW / 2, PH / 2, 11, 'Vue 3D indisponible : la bibliothèque 3D n’est pas chargée (connexion internet nécessaire).', false, 'c');
+    }
+    pages.push(P);
+  }
+
+  // ---- Page 3 : quadrillage avec repères ----
+  const LM = landmarks();
+  {
+    const P = makePage(PW, PH);
+    pageFrame(P, 'Quadrillage et repères de traçage', 3, TOTAL);
+    const V = viewMap(P, { x: 60, y: 80, w: PW - 100, h: PH - 135 }, L, W);
+    drawGrid(P, V, L, W, true);
+    drawTrack(P, V, true);
+    const tg = tileGrid();
+    if (tg && false) {
+      P.lw(0.8); P.dash([4, 3]); P.col('#ff7a00', true);
+      for (let i = 0; i <= tg.nx; i++) P.seg(V.X(tg.x0 + i * tg.tm), V.Y(tg.y0), V.X(tg.x0 + i * tg.tm), V.Y(tg.y0 + tg.ny * tg.tm));
+      for (let j = 0; j <= tg.ny; j++) P.seg(V.X(tg.x0), V.Y(tg.y0 + j * tg.tm), V.X(tg.x0 + tg.nx * tg.tm), V.Y(tg.y0 + j * tg.tm));
+      P.dash(null); P.col('#d06000', false);
+      for (let i = 0; i < tg.nx; i++) for (let j = 0; j < tg.ny; j++)
+        P.text(V.X(tg.x0 + i * tg.tm) + 3, V.Y(tg.y0 + j * tg.tm) - 10, 8, tileName(i, j), true);
+    }
+    for (const m of LM.pts) {
+      const x = V.X(m.x), y = V.Y(m.y);
+      P.col('#ffffff', false); P.circle(x, y, 5.2, 'f');
+      P.lw(0.8); P.col('#c0392b', true); P.circle(x, y, 5.2);
+      P.col('#c0392b', false); P.text(x, y - 2.6, 6, String(m.n), true, 'c');
+    }
+    P.col('#555555', false);
+    P.text(40, 26, 7.5, `Repères numérotés tous les ${LM.step} m le long de l’axe (coordonnées en page 4).` +
+      (false && tg ? ` Tuiles ${TILE_MM} mm = maquette à 1/${num('echelle')}.` : ''));
+    pages.push(P);
+  }
+
+  // ---- Page 4 : résumé ----
+  {
+    const P = makePage(PW, PH);
+    pageFrame(P, 'Résumé', 4, TOTAL);
+    const nClosed = strokes.filter(s => s.closed).length;
+    const widths = [...new Set(strokes.map(s => fr(s.w)))].join(' / ');
+    const area = strokes.reduce((a, s) => a + s.S[s.S.length - 1] * s.w, 0);
+    const hasL2 = strokes.some(s => s.lev.some(l => l === 1));
+    const ph = pillars.map(p => p.h);
+    const MS = modelScale();
+    const rl = railsLength();
+    const sections = [
+      ['Espace', [
+        ['Dimensions', `${fr(L)} × ${fr(W)} m (${fr(L * W, 1)} m2)`],
+        ['Emprise de la piste', ext ? `${fr(ext.x1 - ext.x0)} × ${fr(ext.y1 - ext.y0)} m` : '—']]],
+      ['Piste', [
+        ['Tracés', `${strokes.length} (${nClosed} bouclé${nClosed > 1 ? 's' : ''})`],
+        ['Longueur (axe)', `${fr(totalLen, 1)} m`],
+        ['Largeur de voie', `${widths} m`],
+        ['Surface de roulement', `≈ ${fr(area, 1)} m2`],
+        ['Rayon le plus serré', isFinite(feat.rmin) ? `${fr(feat.rmin)} m (minimum réglé : ${fr(num('rmin'))} m)` : '—'],
+        ['Points sous le rayon mini', String(bad.length)]]],
+      ['Niveau 1', hasL2 ? [
+        ['Hauteur', `${fr(H2() * 100, 0)} cm`],
+        ['Pente des rampes', `${slope()}°, longueur ${fr(rampLen())} m`],
+        ['Rampes', String(feat.ramps.length)],
+        ['Hauteur libre au croisement', isFinite(minClear) ? `${fr(minClear * 100, 0)} cm (minimum ${fr(num('clear') * 100, 0)} cm)` : '—'],
+        ['Zones trop basses', String(conflicts.length)]] : [['Niveau 1', 'aucun']]],
+      ['Pieds', hasL2 ? [
+        ['Nombre', `${pillars.length}${blocked.length ? ` (${blocked.length} écartés au-dessus d’une piste)` : ''}`],
+        ['Section / espacement', `${fr(num('pSec') * 100, 0)} cm / ${fr(num('pSp'))} m`],
+        ['Hauteurs', ph.length ? `${fr(Math.min(...ph) * 100, 0)} à ${fr(Math.max(...ph) * 100, 0)} cm` : '—'],
+        ['Portée max. entre pieds', maxSpan > 0 ? `${fr(maxSpan)} m` : '—']] : [['Pieds', 'aucun']]],
+      ['Marquages', marks.length ? Object.entries(MARK_NAMES).filter(([t]) => marks.some(m => m.type === t))
+        .map(([t, n]) => [n, `${marks.filter(m => m.type === t).length}` +
+          (t === 'point' ? ` (${marks.filter(m => m.type === t).map(m => m.label).filter(Boolean).join(', ')})` : '')]) : [['Marquages', 'aucun']]],
+      ['Vibreurs', kerbs.length ? [['Longueur', `${fr(kerbLen(), 1)} m`], ['Largeur / bande', `${fr(kbW())} m / ${fr(kbL())} m`], ['Épaisseur', `${fr(num('kbH'), 1)} mm au bord, 1 mm à l'intérieur, biseau ${fr(Math.max(0, num('kbBev')))} m, extrémités à ${num('kbAng')}°`]] : [['Vibreurs', 'aucun']]],
+      ['Barrières', [
+        ['Niveau 0 (sol)', $('railMode').selectedOptions[0].text], ['Niveau 1 et rampes', 'des deux côtés'],
+        ['Longueur totale', `≈ ${fr(rl, 1)} m de barrière pleine (hauteur ${fr(RAIL_TOP * 100, 1)} cm)`]]],
+      ['Maquette 3D', MS ? [
+        ['Mode', `une seule pièce, ${modelMax()} mm max.`],
+        ['Taille', `${fr(MS.w * MS.S, 0)} × ${fr(MS.h * MS.S, 0)} mm${MS.fit ? `, échelle ≈ 1/${Math.round(1000 / MS.S)}` : `, ${MS.tg.nx * MS.tg.ny} tuile(s)`}`],
+        ['Terrain', $('mSocle').value === 'plate' ? `plaque de ${fr(num('mBase'), 1)} mm sous tout le terrain` : 'non imprimé (piste seule)'],
+        ['Épaisseur de la chaussée', `${fr(num('mBase') + ROAD_MM, 1)} mm`]] : [['Maquette', '—']]]
+    ];
+    // colonne gauche : caractéristiques
+    let y = PH - 84;
+    for (const [title, rows] of sections) {
+      P.col('#24527f', false); P.text(40, y, 10.5, title, true); y -= 15;
+      for (const [k, v] of rows) {
+        P.col('#555555', false); P.text(50, y, 8.5, k);
+        P.col('#222222', false); P.text(205, y, 8.5, v);
+        y -= 12.5;
+      }
+      y -= 6;
+    }
+    // colonnes de droite : tableau des repères
+    const x0 = PW * 0.5 + 10;
+    P.col('#24527f', false); P.text(x0, PH - 84, 10.5, `Repères de traçage (tous les ${LM.step} m)`, true);
+    P.col('#555555', false); P.text(x0, PH - 97, 7.5, 'X vers la droite, Y vers le bas, depuis le coin haut-gauche de l’espace.');
+    const rowsPerCol = Math.floor((PH - 150) / 11.5), colW = (PW - 40 - x0) / 3;
+    const maxN = rowsPerCol * 3;
+    LM.pts.slice(0, maxN).forEach((m, i) => {
+      const cx = x0 + Math.floor(i / rowsPerCol) * colW, cy = PH - 118 - (i % rowsPerCol) * 11.5;
+      if (i % rowsPerCol === 0) {
+        P.col('#888888', false); P.text(cx, cy + 11.5, 7, 'N°     X (m)     Y (m)    haut.', true);
+      }
+      P.col('#222222', false);
+      P.text(cx + 8, cy, 7.5, String(m.n), true, 'r');
+      P.text(cx + 40, cy, 7.5, fr(m.x), false, 'r');
+      P.text(cx + 72, cy, 7.5, fr(m.y), false, 'r');
+      P.text(cx + 100, cy, 7.5, m.z > Z_EPS ? `${fr(m.z * 100, 0)} cm` : '—', false, 'r');
+    });
+    if (LM.pts.length > maxN) { P.col('#c0392b', false); P.text(x0, 40, 7.5, `… ${LM.pts.length - maxN} repères supplémentaires non affichés.`); }
+    pages.push(P);
+  }
+  return assemblePDF(pages, img);
+}
+
+// ---------- Maquette 3MF pour Bambu Studio, découpée en tuiles ----------
+const ROAD_MM = 0.8;          // relief de la chaussée au-dessus du socle
+const RAIL_WALL_MM = 1.2;     // épaisseur imprimable d'une glissière
+function clipRect(poly, xa, xb, ya, yb) {
+  const lerp = (a, b, t) => ({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t, zt: a.zt + (b.zt - a.zt) * t, zb: a.zb + (b.zb - a.zb) * t });
+  const planes = [
+    [p => p.x >= xa, (a, b) => (xa - a.x) / (b.x - a.x)], [p => p.x <= xb, (a, b) => (xb - a.x) / (b.x - a.x)],
+    [p => p.y >= ya, (a, b) => (ya - a.y) / (b.y - a.y)], [p => p.y <= yb, (a, b) => (yb - a.y) / (b.y - a.y)]
+  ];
+  let out = poly;
+  for (const [inside, tOf] of planes) {
+    const inp = out;
+    out = [];
+    for (let i = 0; i < inp.length; i++) {
+      const a = inp[i], b = inp[(i + 1) % inp.length], ia = inside(a), ib = inside(b);
+      if (ia) out.push(a);
+      if (ia !== ib) out.push(lerp(a, b, tOf(a, b)));
+    }
+    if (!out.length) break;
+  }
+  return out;
+}
+// Prisme fermé (dessus, dessous, côtés) à partir d'un polygone convexe, hauteurs par sommet
+function addPrism(mesh, pts) {
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a.x * b.y - b.x * a.y; }
+  if (Math.abs(area) < 1e-3) return;                         // pièce dégénérée
+  if (area < 0) pts = pts.slice().reverse();
+  const n = pts.length, base = mesh.V.length / 3;
+  for (const p of pts) mesh.V.push(p.x, p.y, p.zt);
+  for (const p of pts) mesh.V.push(p.x, p.y, p.zb);
+  for (let i = 1; i < n - 1; i++) {
+    mesh.T.push(base, base + i, base + i + 1);                // dessus
+    mesh.T.push(base + n, base + n + i + 1, base + n + i);    // dessous
+  }
+  for (let i = 0; i < n; i++) {
+    const a = i, b = (i + 1) % n;
+    mesh.T.push(base + n + a, base + n + b, base + b, base + n + a, base + b, base + a);
+  }
+}
+// Échelle de la maquette : soit celle de l'onglet Piste (tuiles), soit réduite pour tenir sur le plateau
+const modelMax = () => Math.min(200, Math.max(50, num('mMax') || 200));
+function modelScale() {
+  if (!bbox) return null;
+  const w = bbox.x1 - bbox.x0, h = bbox.y1 - bbox.y0;
+  const S = modelMax() / Math.max(w, h);                       // une seule pièce, 200 mm max
+  return { fit: true, S, tg: { x0: bbox.x0, y0: bbox.y0, x1: bbox.x1, y1: bbox.y1, tm: Math.max(w, h) + 1, nx: 1, ny: 1 }, w, h };
+}
+function updateModelInfo() {
+  const m = modelScale();
+  if (!m) { $('modelInfo').textContent = ''; return; }
+  $('modelInfo').textContent = m.fit
+    ? `Maquette : ${(m.w * m.S).toFixed(0)} × ${(m.h * m.S).toFixed(0)} mm, échelle ≈ 1/${Math.round(1000 / m.S)}, hauteur du niveau 1 : ${(H2() * m.S).toFixed(1)} mm`
+    : `Maquette : ${(m.w * m.S).toFixed(0)} × ${(m.h * m.S).toFixed(0)} mm à 1/${num('echelle')}, en ${m.tg.nx * m.tg.ny} tuile(s)`;
+}
+function buildModel() {
+  const MS = modelScale();
+  if (!MS) return null;
+  const tg = MS.tg, S = MS.S;                                 // mètres réels → mm de maquette
+  const baseMM = Math.max(0, num('mBase'));
+  const withRails = $('mRails').checked;
+  const plate = $('mSocle').value === 'plate';               // plaque sous le terrain, ou piste seule
+  const floor = plate ? baseMM : 0;                          // dessous de la chaussée au sol / des pieds / des barrières
+  const meshes = [];
+  for (let i = 0; i < tg.nx; i++) for (let j = 0; j < tg.ny; j++) meshes.push({ i, j, V: [], T: [] });
+  const meshAt = (i, j) => meshes[i * tg.ny + j];
+  // ajoute une pièce (polygone en mètres, hauteurs en mm) dans chaque tuile qu'elle touche
+  function addPiece(poly) {
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    for (const p of poly) { x0 = Math.min(x0, p.x); x1 = Math.max(x1, p.x); y0 = Math.min(y0, p.y); y1 = Math.max(y1, p.y); }
+    const i0 = Math.max(0, Math.floor((x0 - tg.x0) / tg.tm)), i1 = Math.min(tg.nx - 1, Math.floor((x1 - tg.x0) / tg.tm));
+    const j0 = Math.max(0, Math.floor((y0 - tg.y0) / tg.tm)), j1 = Math.min(tg.ny - 1, Math.floor((y1 - tg.y0) / tg.tm));
+    for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+      const xa = tg.x0 + i * tg.tm, xb = Math.min(tg.x1, xa + tg.tm), ya = tg.y0 + j * tg.tm, yb = Math.min(tg.y1, ya + tg.tm);
+      const cp = clipRect(poly, xa, xb, ya, yb);
+      if (cp.length < 3) continue;
+      // repère local de la tuile, en mm ; l'axe Y est inversé pour que la maquette ne soit pas en miroir
+      addPrism(meshAt(i, j), cp.map(p => ({ x: (p.x - xa) * S, y: (yb - p.y) * S, zt: p.zt, zb: p.zb })));
+    }
+  }
+  // socle de chaque tuile
+  if (plate && baseMM > 0) for (const m of meshes) {
+    const xa = tg.x0 + m.i * tg.tm, xb = Math.min(tg.x1, xa + tg.tm), ya = tg.y0 + m.j * tg.tm, yb = Math.min(tg.y1, ya + tg.tm);
+    const w = (xb - xa) * S, h = (yb - ya) * S;
+    addPrism(m, [{ x: 0, y: 0 }, { x: w, y: 0 }, { x: w, y: h }, { x: 0, y: h }].map(p => ({ ...p, zt: baseMM, zb: 0 })));
+  }
+  const deckMM = Math.max(ROAD_MM, DECK * S, 1.2);             // épaisseur du tablier, 1,2 mm minimum
+  const railMM = Math.max(RAIL_TOP * S, 2);                     // hauteur de glissière, 2 mm minimum
+  const top = z => baseMM + ROAD_MM + z * S;
+  const bottom = z => z > Z_EPS ? Math.max(floor, top(z) - deckMM) : floor;
+  for (const s of strokes) {
+    const c = s.curve, n = c.length;
+    if (n < 2) continue;
+    const idx = [];
+    for (let j = 0; j < n; j += 2) idx.push(j);
+    if (idx[idx.length - 1] !== n - 1) idx.push(n - 1);
+    for (let q = 0; q < idx.length - 1; q++) {
+      const a = idx[q], b = idx[q + 1];
+      const V = (p, j) => ({ x: p.x, y: p.y, zt: top(c[j].z), zb: bottom(c[j].z) });
+      addPiece([V(s.edgeL[a], a), V(s.edgeL[b], b), V(s.edgeR[b], b), V(s.edgeR[a], a)]);   // chaussée / tablier
+      if (!withRails) continue;
+      const hw = RAIL_WALL_MM / S / 2;
+      for (const side of [1, -1]) {
+        const f = side > 0 ? s.railL : s.railR, rp = side > 0 ? s.railPL : s.railPR;
+        if (!f[a] || !f[b]) continue;
+        const R = (j, sg) => ({ x: rp[j].x + s.nrm[j].x * hw * sg, y: rp[j].y + s.nrm[j].y * hw * sg,
+          zt: baseMM + ROAD_MM + c[j].z * S + railMM, zb: floor + c[j].z * S });
+        addPiece([R(a, 1), R(b, 1), R(b, -1), R(a, -1)]);   // glissière (paroi pleine)
+      }
+    }
+  }
+  // raccords entre tracés
+  for (const f of fillets) {
+    addPiece(f.poly.map(q => ({ x: q.x, y: q.y, zt: top(f.z), zb: bottom(f.z) })));
+    if (!withRails || !f.rail) continue;
+    const hw = RAIL_WALL_MM / S / 2, rp = f.railPts;
+    for (let k = 0; k < rp.length - 1; k++) {
+      const Rr = (q, sg) => ({ x: q.x + q.nx * hw * sg, y: q.y + q.ny * hw * sg, zt: baseMM + ROAD_MM + f.z * S + railMM, zb: floor + f.z * S });
+      addPiece([Rr(rp[k], 1), Rr(rp[k + 1], 1), Rr(rp[k + 1], -1), Rr(rp[k], -1)]);
+    }
+  }
+  // pieds du niveau 1
+  const ph = Math.max(Math.max(0.01, num('pSec')) * S, 2) / S / 2;   // pied : 2 mm minimum
+  for (const p of pillars) {
+    const zt = baseMM + ROAD_MM + p.h * S + DECK * S - deckMM;          // sous le tablier
+    addPiece([[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => ({ x: p.x + u * ph, y: p.y + v * ph, zt, zb: floor })));
+  }
+  return { tg, S, meshes, fit: MS.fit };
+}
+
+// Archive ZIP sans compression (format des fichiers 3MF)
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xFFFFFFFF; for (let i = 0; i < u8.length; i++) c = CRC_TABLE[(c ^ u8[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function makeZip(files) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  for (const f of files) {
+    const name = enc.encode(f.name), data = typeof f.data === 'string' ? enc.encode(f.data) : f.data, crc = crc32(data);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(10, 0, true); h.setUint16(12, 33, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, name.length, true);
+    parts.push(h.buffer, name, data);
+    const cd = new DataView(new ArrayBuffer(46));
+    cd.setUint32(0, 0x02014b50, true); cd.setUint16(4, 20, true); cd.setUint16(6, 20, true); cd.setUint16(14, 33, true);
+    cd.setUint32(16, crc, true); cd.setUint32(20, data.length, true); cd.setUint32(24, data.length, true); cd.setUint16(28, name.length, true);
+    cd.setUint32(42, offset, true);
+    central.push(cd.buffer, name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((a, b) => a + b.byteLength, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, end.buffer], { type: 'model/3mf' });
+}
+function build3MF() {
+  const M = buildModel();
+  if (!M) return null;
+  const { tg, meshes } = M, f = v => +v.toFixed(3);
+  let res = '', build = '', id = 0, tris = 0;
+  for (const m of meshes) {
+    if (!m.T.length) continue;
+    id++;
+    const vs = [], ts = [];
+    for (let k = 0; k < m.V.length; k += 3) vs.push(`<vertex x="${f(m.V[k])}" y="${f(m.V[k + 1])}" z="${f(m.V[k + 2])}"/>`);
+    for (let k = 0; k < m.T.length; k += 3) ts.push(`<triangle v1="${m.T[k]}" v2="${m.T[k + 1]}" v3="${m.T[k + 2]}"/>`);
+    tris += m.T.length / 3;
+    res += `<object id="${id}" type="model" name="${M.fit ? 'Piste' : 'Tuile ' + tileName(m.i, m.j)}"><mesh><vertices>${vs.join('')}</vertices><triangles>${ts.join('')}</triangles></mesh></object>\n`;
+    // disposition d'assemblage, avec 10 mm d'écart entre tuiles
+    const tx = m.i * (TILE_MM + 10), ty = (tg.ny - 1 - m.j) * (TILE_MM + 10);
+    build += `<item objectid="${id}" transform="1 0 0 0 1 0 0 0 1 ${tx} ${ty} 0"/>\n`;
+  }
+  const model = `<?xml version="1.0" encoding="UTF-8"?>
+<model unit="millimeter" xml:lang="fr-FR" xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02">
+<metadata name="Title">Piste drift RC 1/${num('echelle')}</metadata>
+<resources>
+${res}</resources>
+<build>
+${build}</build>
+</model>`;
+  const blob = makeZip([
+    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="model" ContentType="application/vnd.ms-package.3dmanufacturing-3dmodel+xml"/></Types>' },
+    { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Target="/3D/3dmodel.model" Id="rel0" Type="http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"/></Relationships>' },
+    { name: '3D/3dmodel.model', data: model }
+  ]);
+  return { blob, objects: id, tris, fit: M.fit, S: M.S };
+}
+
+// ---------- Boutons de l'onglet Fichier ----------
+$('fSave').onclick = () => { download(`piste-drift-${stamp()}.json`, JSON.stringify(projectData(), null, 1), 'application/json'); fileMsg('Projet enregistré.'); };
+$('fOpen').onclick = () => $('fOpenInput').click();
+$('mMax').addEventListener('input', updateModelInfo);
+$('fOpenInput').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try { loadProject(JSON.parse(r.result)); fileMsg(`Projet « ${file.name} » ouvert.`); }
+    catch (err) { fileMsg('Impossible d\'ouvrir ce fichier : ' + err.message); }
+  };
+  r.readAsText(file);
+  e.target.value = '';
+};
+$('fPdf').onclick = () => {
+  if (!strokes.length) { fileMsg('Trace d\'abord une piste.'); return; }
+  download(`piste-drift-dossier-${stamp()}.pdf`, buildPDF(), 'application/pdf');
+  fileMsg('Dossier PDF généré (4 pages).');
+};
+$('f3mf').onclick = () => {
+  if (!strokes.length) { fileMsg('Trace d\'abord une piste.'); return; }
+  const r = build3MF();
+  download(r.fit ? `piste-drift-maquette-plateau-${stamp()}.3mf` : `piste-drift-maquette-1-${num('echelle')}-${stamp()}.3mf`, r.blob);
+  fileMsg(r.fit
+    ? `Maquette 3MF : une pièce à l'échelle ≈ 1/${Math.round(1000 / r.S)}, ${r.tris.toLocaleString('fr-FR')} triangles.`
+    : `Maquette 3MF : ${r.objects} tuile(s), ${r.tris.toLocaleString('fr-FR')} triangles.`);
+};
+
+
+// ===================================================================
+// ---------- Vibreurs : masque peint à la souris ----------
+// ===================================================================
+// Le masque est une suite de tampons ronds { x, y, r, lv, neg } posés au sol (comme de la peinture) :
+// un bord de piste reçoit un vibreur là où le dernier tampon qui le recouvre est positif.
+// lv = niveau travaillé au moment du coup de pinceau ('all', '0' ou '1').
+let kerbMask = [], kerbs = [], kbHover = null;
+const kbW = () => Math.max(0.01, num('kbW'));
+const kbL = () => Math.max(0.02, num('kbL'));
+const kbBrush = () => Math.max(0.05, num('kbBrush'));
+function lvMatch(lv, z) { return lv === 'all' || (lv === '0' ? z <= 0.02 : z > 0.02); }
+// Masque peint (vibreurs, barrières) : le dernier tampon qui recouvre le point décide
+function inMask(arr, p, z) {
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const k = arr[i];
+    if ((p.x - k.x) ** 2 + (p.y - k.y) ** 2 <= k.r * k.r && lvMatch(k.lv, z)) return !k.neg;
+  }
+  return false;
+}
+function inKerbMask(x, y, z) { return inMask(kerbMask, { x, y }, z); }
+function paintMask(arr, p, r) {
+  if (drag.last && dist(drag.last, p) < r * 0.3) return;      // tampons espacés
+  if (drag.neg && !arr.some(k => !k.neg && dist(k, p) < k.r + r)) { drag.last = p; return; }  // rien à effacer ici
+  arr.push({ x: +p.x.toFixed(3), y: +p.y.toFixed(3), r, lv: workLev(), neg: drag.neg });
+  drag.last = p;
+}
+function kerbPaint(p) {
+  if (drag.type === 'rail') { paintMask(railMask, p, rlBrush()); strokes.forEach(computeRails); return; }
+  paintMask(kerbMask, p, kbBrush());
+}
+// Géométrie : bandes posées sur la piste, entre le bord et le bord décalé de la largeur du vibreur
+function computeKerbs() {
+  kerbs = [];
+  if (!kerbMask.length) { if ($('kbInfo')) $('kbInfo').textContent = ''; return; }
+  const W = kbW();
+  // extrémité de portion qui touche un raccord : pas de pointe ni de biseau (le vibreur continue dans l'arrondi)
+  const nearFil = q => fillets.some(f => dist(q, f.P1) < 0.03 || dist(q, f.P2) < 0.03);
+  for (const s of strokes) {
+    const c = s.curve, n = c.length;
+    if (n < 2) continue;
+    for (const side of [1, -1]) {
+      const edge = side > 0 ? s.edgeL : s.edgeR;
+      const inner = offsetLine(s, side, () => Math.max(0.005, s.w / 2 - W));
+      const on = c.map((q, j) => inKerbMask(edge[j].x, edge[j].y, q.z) && visibleEdge(edge[j], q.z));
+      kerbRuns(edge, inner, c.map(q => q.z), on, s.closed, nearFil);
+    }
+  }
+  // arrondis des raccords : le vibreur suit l'arc, côté chaussée
+  for (const f of fillets) {
+    const arc = f.arc;
+    const inner = arc.map((q, i) => ({ x: q.x + f.inN[i].x * W, y: q.y + f.inN[i].y * W }));
+    const on = arc.map(q => inKerbMask(q.x, q.y, f.z));
+    kerbRuns(arc, inner, arc.map(() => f.z), on, false, () => true);
+  }
+  if ($('kbInfo')) $('kbInfo').textContent = kerbs.length ? `Vibreurs posés : ${kerbLen().toFixed(1)} m de bordure.` : (kerbMask.length ? 'Le masque ne touche aucun bord de piste.' : '');
+}
+// Bandes rouges / blanches le long d'un bord (edge) jusqu'à la ligne intérieure (inner), là où « on »
+function kerbRuns(edge, inner, Z, on, closed, noTaperAt) {
+  const W = kbW(), L = kbL(), BEV = Math.max(0, num('kbBev')), FINE = 0.02;
+  const ANG = Math.min(90, Math.max(5, num('kbAng') || 30)) * Math.PI / 180;
+  const TL = ANG >= Math.PI / 2 - 1e-6 ? 0 : W / Math.tan(ANG);   // longueur de la pointe en plan
+  const ZONE = Math.max(BEV, TL), n = edge.length;
+  if (n < 2) return;
+  // longueurs mesurées le long du bord (plus long que l'axe à l'extérieur d'un virage)
+  const E = [0];
+  for (let j = 1; j < n; j++) E.push(E[j - 1] + dist(edge[j], edge[j - 1]));
+  const T = E[n - 1];
+  // portions continues (suites de segments j → j+1 tous deux dans le masque)
+  const runs = [];
+  let cur = null;
+  for (let j = 0; j < n - 1; j++) {
+    if (on[j] && on[j + 1]) { if (!cur) { cur = []; runs.push(cur); } cur.push(j); }
+    else cur = null;
+  }
+  if (!runs.length) return;
+  let full = false;
+  if (closed && runs.length > 1 && runs[0][0] === 0 && runs[runs.length - 1].slice(-1)[0] === n - 2) {
+    runs[runs.length - 1].push(...runs.shift().map(j => j + n));   // la portion passe par le point de départ : on la recolle
+  } else if (closed && runs.length === 1 && runs[0].length === n - 1) full = true;   // tout le tour : pas de biseau
+  for (const run of runs) {
+    // abscisse « déroulée » (j ≥ n : après le tour complet)
+    const Sx = j => j >= n ? E[j - n] + T : E[j];
+    const jr = j => j >= n ? j - n : j;
+    const r0 = Sx(run[0]), r1 = run[run.length - 1] >= n ? E[jr(run[run.length - 1]) + 1] + T : E[run[run.length - 1] + 1];
+    const t0 = !full && !noTaperAt(edge[jr(run[0])]), t1 = !full && !noTaperAt(edge[jr(run[run.length - 1]) + 1]);
+    const dEnd = u => Math.min(t0 ? u - r0 : Infinity, t1 ? r1 - u : Infinity);
+    const fac = u => {                                      // hauteur relative : biseau arrondi aux bouts
+      if (BEV <= 0) return 1;
+      const t = Math.min(1, Math.max(0, dEnd(u) / BEV));
+      return t * t * (3 - 2 * t);
+    };
+    const wid = u => TL <= 0 ? 1 : Math.min(1, Math.max(0, dEnd(u) / TL));   // pointe à l'angle choisi
+    for (const jj of run) {
+      const j = jr(jj), S0 = Sx(jj), S1 = S0 + (E[j + 1] - E[j]);
+      if (S1 - S0 < 1e-6) continue;
+      const cuts = new Set([S0, S1]);
+      for (let x = (Math.floor(S0 / L) + 1) * L; x < S1 - 1e-9; x += L) cuts.add(x);
+      if (ZONE > 0 && (t0 || t1)) for (let x = Math.ceil(S0 / FINE) * FINE; x < S1; x += FINE)
+        if (dEnd(x) < ZONE) cuts.add(x);                   // découpe fine dans les pointes et biseaux
+      const cs = [...cuts].sort((x, y) => x - y);
+      const at = (A, t) => ({ x: A[j].x + (A[j + 1].x - A[j].x) * t, y: A[j].y + (A[j + 1].y - A[j].y) * t });
+      for (let k = 0; k < cs.length - 1; k++) {
+        if (cs[k + 1] - cs[k] < 1e-6) continue;
+        const ta = (cs[k] - S0) / (S1 - S0), tb = (cs[k + 1] - S0) / (S1 - S0);
+        const za = Z[j] + (Z[j + 1] - Z[j]) * ta, zb = Z[j] + (Z[j + 1] - Z[j]) * tb;
+        const ea = at(edge, ta), eb = at(edge, tb), ia = at(inner, ta), ib = at(inner, tb);
+        const wa = wid(cs[k]), wb = wid(cs[k + 1]);
+        const mix = (e, i, w) => ({ x: e.x + (i.x - e.x) * w, y: e.y + (i.y - e.y) * w });
+        kerbs.push({ pts: [ea, eb, mix(eb, ib, wb), mix(ea, ia, wa)], za, zb, fa: fac(cs[k]), fb: fac(cs[k + 1]),
+          red: Math.floor((cs[k] + cs[k + 1]) / 2 / L) % 2 === 0, len: cs[k + 1] - cs[k] });
+      }
+    }
+  }
+}
+// Un point de bord est « visible » s'il n'est pas recouvert par la chaussée d'une autre portion
+// (épingle plus serrée que la demi-voie, croisement au même niveau…)
+function visibleEdge(p, z) {
+  for (const f of fillets) if (Math.abs(f.z - z) < 0.05 && filletCovers(f, p)) return false;
+  for (const s of strokes) {
+    if (!s.curve) continue;
+    if (s.bb && (p.x < s.bb.x0 || p.x > s.bb.x1 || p.y < s.bb.y0 || p.y > s.bb.y1)) continue;
+    const c = s.curve, lim = (s.w / 2 - 0.01) ** 2;
+    for (let j = 0; j < c.length; j += 1) {
+      const q = c[j];
+      if (Math.abs(q.z - z) > 0.05) continue;
+      if ((q.x - p.x) ** 2 + (q.y - p.y) ** 2 < lim) return false;
+    }
+  }
+  return true;
+}
+const kerbLen = () => kerbs.reduce((a, k) => a + k.len, 0);
+function drawKerbStrips(keep, ghost) {
+  const poly = k => { ctx.beginPath(); k.pts.forEach((q, i) => { const Q = P(q); i ? ctx.lineTo(Q.x, Q.y) : ctx.moveTo(Q.x, Q.y); }); ctx.closePath(); };
+  for (const red of [true, false]) {
+    ctx.fillStyle = red ? '#d62828' : '#ffffff';
+    for (const k of kerbs) {
+      if (k.red !== red || !keep((k.za + k.zb) / 2)) continue;
+      const vis = zVisible((k.za + k.zb) / 2);
+      if (!vis && !ghost) continue;
+      ctx.globalAlpha = vis ? 1 : 0.15;
+      poly(k); ctx.fill();
+      if (!red) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.5; ctx.stroke(); }   // évite les liserés entre bandes
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+// Masque du pinceau (vibreurs / barrières) et cercle du pinceau : par-dessus tout
+function drawKerbOverlay(wl) {
+  // le masque n'est plus affiché : on ne voit que le résultat (vibreurs / barrières) et le cercle du pinceau
+  if ((mode !== 'kerb' && mode !== 'rail') || !kbHover) return;
+  const C = P(kbHover), del = drag ? drag.neg : (lastPtr === 'mouse' ? null : $(mode === 'rail' ? 'rlTool' : 'kbTool').value === 'del');
+  ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5;
+  ctx.strokeStyle = del === true ? '#c0392b' : del === false ? '#1a9e3a' : '#e85d04';   // rouge = supprime, vert = ajoute
+  ctx.beginPath(); ctx.arc(C.x, C.y, (mode === 'rail' ? rlBrush() : kbBrush()) * view.scale, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+}
+// Relief : épaisseur réglée côté bord, pente jusqu'à 1 mm côté intérieur, biseau arrondi au début et à la fin
+function kerbs3D(group) {
+  if (!kerbs.length) return;
+  const hO = Math.max(0, num('kbH')) / 1000, hI = Math.min(hO, 0.001), base = 0.004;
+  for (const red of [true, false]) {
+    const pos = [], idx = [];
+    for (const k of kerbs) {
+      if (k.red !== red) continue;
+      const zs = [k.za, k.zb, k.zb, k.za], f = [k.fa, k.fb, k.fb, k.fa], hh = [hO, hO, hI, hI], b = pos.length / 3;
+      k.pts.forEach((q, i) => pos.push(q.x, zs[i] + base + Math.max(0.0002, hh[i] * f[i]), q.y));   // dessus incliné
+      k.pts.forEach((q, i) => pos.push(q.x, zs[i] + base, q.y));                                     // pied
+      idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
+      for (let i = 0; i < 4; i++) { const a = i, c = (i + 1) % 4; idx.push(b + a, b + 4 + a, b + 4 + c, b + a, b + 4 + c, b + c); }
+    }
+    if (idx.length) group.add(meshFrom(pos, idx, new THREE.MeshLambertMaterial({ color: red ? 0xd62828 : 0xffffff, side: THREE.DoubleSide })));
+  }
+}
+function kerbsPDF(Pg, V, keep = () => true) {
+  for (const red of [true, false]) {
+    Pg.col(red ? '#d62828' : '#ffffff', false);
+    for (const k of kerbs) if (k.red === red && keep((k.za + k.zb) / 2)) Pg.poly(k.pts.map(q => [V.X(q.x), V.Y(q.y)]), 'f');
+  }
+}
+function rlBrush() { return Math.max(0.05, num('rlBrush')); }
+// Convertit les glissières actuelles du sol en masque (tampons le long de la glissière)
+function railsToMask() {
+  for (const s of strokes) for (const side of [1, -1]) {
+    const f = side > 0 ? s.railL : s.railR, rp = side > 0 ? s.railPL : s.railPR;
+    if (!f) continue;
+    let last = -Infinity;
+    for (let j = 0; j < s.curve.length; j++) {
+      if (!f[j] || s.curve[j].z > Z_EPS) { last = -Infinity; continue; }
+      if (s.S[j] - last < 0.12) continue;
+      railMask.push({ x: +rp[j].x.toFixed(3), y: +rp[j].y.toFixed(3), r: 0.14, lv: '0', neg: false });
+      last = s.S[j];
+    }
+  }
+}
+function fillRails(md) {
+  snap();
+  $('railMode').value = md; rebuildAll();
+  railsToMask();
+  $('railMode').value = 'manual'; rebuildAll();
+  update();
+}
+$('rlFillTurns').onclick = () => fillRails('turns');
+$('rlFillBoth').onclick = () => fillRails('both');
+$('rlClear').onclick = () => { if (!railMask.length) return; snap(); railMask = []; rebuildAll(); update(); };
+$('kbClear').onclick = () => { if (!kerbMask.length) return; snap(); kerbMask = []; update(); };
+['kbW', 'kbL', 'kbH', 'kbBev', 'kbAng'].forEach(id => $(id).addEventListener('input', () => update()));
+cv.addEventListener('pointerleave', () => { if (kbHover) { kbHover = null; draw(); } });
+
+// ===================================================================
+// ---------- Marquages blancs : points de passage, croix, couloirs d'entrée / de sortie ----------
+// ===================================================================
+// Un marquage = { type: 'point' | 'cross' | 'in' | 'out', x, y (mètres), rot (rotation manuelle, degrés),
+//                 size (point / croix), len, wid (couloir), label }
+// Son orientation suit la piste : tangente de la piste au point le plus proche + rotation manuelle.
+let marks = [], selMark = -1;
+const MARK_LINE = 0.035;                                       // largeur des lignes peintes (m)
+const MARK_NAMES = { point: 'Point de passage', cross: 'Croix', in: 'Couloir d\'entrée', out: 'Couloir de sortie' };
+
+// Repère local : point de piste le plus proche (hauteur, direction)
+function markFrame(m) {
+  let best = null, bd = Infinity;
+  for (const s of strokes) for (let j = 0; j < s.curve.length; j++) {
+    const q = s.curve[j], d = (q.x - m.x) ** 2 + (q.y - m.y) ** 2;
+    if (d < bd) { bd = d; best = { s, j }; }
+  }
+  let ux = 1, uy = 0, z = 0, onTrack = false;
+  if (best) {
+    // tangente lissée sur ±0,4 m autour du point le plus proche : pas de bascule dans les virages serrés
+    const s = best.s, c = s.curve, S = s.S, j0 = best.j, WIN = 0.4;
+    const a = c[idxAt(s, S[j0] - WIN)], b = c[idxAt(s, S[j0] + WIN)];
+    let tx = b.x - a.x, ty = b.y - a.y;
+    const n = s.nrm[j0];
+    if (Math.hypot(tx, ty) < 1e-6 || tx * n.y - ty * n.x < 0) { tx = n.y; ty = -n.x; }   // sécurité : même sens que la piste
+    const l = Math.hypot(tx, ty); ux = tx / l; uy = ty / l;
+    z = best.s.curve[best.j].z;
+    onTrack = Math.sqrt(bd) <= best.s.w / 2 + 0.05;
+  }
+  const a = Math.atan2(uy, ux) + (m.rot || 0) * Math.PI / 180;
+  ux = Math.cos(a); uy = Math.sin(a);
+  return { x: m.x, y: m.y, ux, uy, vx: -uy, vy: ux, z, onTrack };
+}
+// Formes du marquage en coordonnées monde : traits (épaisseur en m), disques, étiquette
+// Position d'un point par rapport à la piste : tracé, abscisse curviligne, décalage latéral (côté gauche > 0)
+function trackPos(p) {
+  let best = null, bd = Infinity;
+  for (const s of strokes) for (let j = 0; j < s.curve.length; j++) {
+    const q = s.curve[j], d = (q.x - p.x) ** 2 + (q.y - p.y) ** 2;
+    if (d < bd) { bd = d; best = { s, j }; }
+  }
+  if (!best) return null;
+  const { s, j } = best, c = s.curve[j], n = s.nrm[j];
+  return { s, j, S: s.S[j], off: (p.x - c.x) * n.x + (p.y - c.y) * n.y };
+}
+function alongPt(s, S, off) {
+  const j = idxAt(s, S), c = s.curve[j], n = s.nrm[j];
+  return { x: c.x + n.x * off, y: c.y + n.y * off, z: c.z };
+}
+// Ligne qui suit la piste entre deux abscisses, avec un décalage qui varie de o0 à o1
+// Sans replis : à l'intérieur d'un virage plus serré que le décalage, le trait ne repart pas en arrière
+// (il marque un angle, comme le bord de la piste).
+function followLine(s, S0, S1, o0, o1) {
+  const n = Math.max(2, Math.ceil(Math.abs(S1 - S0) / 0.04)), pts = [];
+  let P = null, C = null;
+  for (let i = 0; i <= n; i++) {
+    const t = i / n, Sx = S0 + (S1 - S0) * t;
+    let Q = alongPt(s, Sx, o0 + (o1 - o0) * t);
+    const c = alongPt(s, Sx, 0);
+    if (P && C) {
+      const tx = c.x - C.x, ty = c.y - C.y;                   // sens d'avancement le long de l'axe
+      if ((Q.x - P.x) * tx + (Q.y - P.y) * ty <= 0) Q = { x: P.x, y: P.y, z: Q.z };
+    }
+    if (!P || Q.x !== P.x || Q.y !== P.y) pts.push(Q);
+    P = Q; C = c;
+  }
+  return untangle(pts);
+}
+// Supprime les boucles d'une ligne qui se recoupe : on coupe au point de croisement
+function untangle(pts) {
+  const X = (a, b, c, d) => {
+    const r = { x: b.x - a.x, y: b.y - a.y }, q = { x: d.x - c.x, y: d.y - c.y }, den = r.x * q.y - r.y * q.x;
+    if (Math.abs(den) < 1e-12) return null;
+    const t = ((c.x - a.x) * q.y - (c.y - a.y) * q.x) / den, u = ((c.x - a.x) * r.y - (c.y - a.y) * r.x) / den;
+    return t > 1e-9 && t < 1 - 1e-9 && u > 1e-9 && u < 1 - 1e-9 ? { x: a.x + r.x * t, y: a.y + r.y * t, z: a.z } : null;
+  };
+  let changed = true, guard = 0;
+  while (changed && guard++ < 50) {
+    changed = false;
+    outer: for (let i = 0; i < pts.length - 3; i++)
+      for (let j = pts.length - 2; j > i + 1; j--) {           // le croisement le plus lointain : enlève toute la boucle
+        const I = X(pts[i], pts[i + 1], pts[j], pts[j + 1]);
+        if (I) { pts = [...pts.slice(0, i + 1), I, ...pts.slice(j + 1)]; changed = true; break outer; }
+      }
+  }
+  return pts;
+}
+// Liaisons entrée → sortie : chaque couloir d'entrée est relié au couloir de sortie le plus proche
+// sur le même tracé et du même côté (intérieur / extérieur), en suivant la courbe.
+function markLinks() {
+  if (!$('mkLink').checked) return [];
+  const two = $('mkLinkStyle').value === 'two';
+  const pos = m => ({ m, t: trackPos(m) });
+  const ins = marks.filter(m => m.type === 'in').map(pos).filter(o => o.t);
+  const outs = marks.filter(m => m.type === 'out').map(pos).filter(o => o.t);
+  const links = [];
+  for (const A of ins) {
+    let best = null, bd = Infinity;
+    for (const B of outs) {
+      if (B.used || B.t.s !== A.t.s) continue;
+      if (Math.abs(A.t.off) > 0.05 && Math.abs(B.t.off) > 0.05 && Math.sign(A.t.off) !== Math.sign(B.t.off)) continue;
+      const d = arcDist(A.t.s, A.t.S, B.t.S);
+      if (d < bd) { bd = d; best = B; }
+    }
+    if (!best) continue;
+    best.used = true;
+    const s = A.t.s, T = s.S[s.S.length - 1];
+    let d = best.t.S - A.t.S;                                  // sens le plus court (boucle : par-dessus le départ)
+    if (s.closed) { if (d > T / 2) d -= T; if (d < -T / 2) d += T; }
+    const dir = Math.sign(d) || 1;
+    const S0 = A.t.S + dir * A.m.len / 2, S1 = A.t.S + d - dir * best.m.len / 2;
+    if ((S1 - S0) * dir <= 0) continue;                        // couloirs qui se chevauchent : rien à relier
+    const side = Math.sign(A.t.off) || Math.sign(best.t.off) || 1;
+    const pairs = two
+      ? [[A.t.off - A.m.wid / 2, best.t.off - best.m.wid / 2], [A.t.off + A.m.wid / 2, best.t.off + best.m.wid / 2]]
+      : [[A.t.off - side * A.m.wid / 2, best.t.off - side * best.m.wid / 2]];   // bord du couloir côté centre de la piste
+    for (const [o0, o1] of pairs) links.push(followLine(s, S0, S1, o0, o1));
+  }
+  return links;
+}
+function markShapes(m) {
+  const F = markFrame(m), P = (u, v) => ({ x: F.x + F.ux * u + F.vx * v, y: F.y + F.uy * u + F.vy * v });
+  const lines = [], discs = [];
+  if (m.type === 'point') discs.push({ c: P(0, 0), r: m.size / 2 });
+  if (m.type === 'cross') {
+    const h = m.size / 2;
+    lines.push([P(-h, -h), P(h, h)], [P(-h, h), P(h, -h)]);
+  }
+  if (m.type === 'in' || m.type === 'out') {
+    const L = m.len / 2, W = m.wid / 2, t = trackPos(m), rot = ((m.rot || 0) % 360 + 360) % 360;
+    if (t && (rot === 0 || rot === 180)) {
+      // couloir aligné sur la piste : ses bords suivent la courbe
+      const sg = rot === 0 ? 1 : -1;                           // sens de passage
+      lines.push(followLine(t.s, t.S - L, t.S + L, t.off - W, t.off - W), followLine(t.s, t.S - L, t.S + L, t.off + W, t.off + W));
+      const g = t.S + sg * (m.type === 'in' ? -L : L);         // porte : à l'entrée ou à la sortie
+      lines.push([alongPt(t.s, g, t.off - W), alongPt(t.s, g, t.off + W)]);
+    } else {
+      lines.push([P(-L, -W), P(L, -W)], [P(-L, W), P(L, W)]);
+      const g = m.type === 'in' ? -L : L;
+      lines.push([P(g, -W), P(g, W)]);
+    }
+    const c = Math.min(0.12, W * 0.5);                         // chevron indiquant le sens
+    lines.push([P(-c * 0.6, -c), P(c * 0.6, 0)], [P(-c * 0.6, c), P(c * 0.6, 0)]);
+  }
+  const lab = m.label ? { p: P(0, (m.type === 'in' || m.type === 'out' ? m.wid / 2 : m.size / 2) + 0.18), t: m.label } : null;
+  return { F, lines, discs, lab };
+}
+function markVisible(m) { return zVisible(markFrame(m).z); }
+function findMark(p) {
+  const tol = 14 / view.scale;
+  let best = -1, bd = Infinity;
+  marks.forEach((m, i) => {
+    if (!markVisible(m)) return;
+    const r = Math.max(tol, (m.type === 'in' || m.type === 'out') ? Math.max(m.len, m.wid) / 2 : m.size / 2);
+    const d = dist(m, p);
+    if (d < r && d < bd) { bd = d; best = i; }
+  });
+  return best;
+}
+function nextLabel(type) {
+  if (type === 'point') return 'P' + (marks.filter(m => m.type === 'point').length + 1);
+  if (type === 'in') return 'Entrée';
+  if (type === 'out') return 'Sortie';
+  return '';
+}
+function placeMark(p) {
+  const type = $('mkType').value;
+  const m = { type, x: p.x, y: p.y, rot: 0, size: type === 'cross' ? num('mkCross') : num('mkPoint'),
+    len: num('mkLen'), wid: num('mkWid'), label: nextLabel(type) };
+  if (!markFrame(m).onTrack) { if (selMark < 0) $('mkMsg').textContent = 'Clique sur la piste pour poser un marquage.'; return -1; }
+  marks.push(m);
+  $('mkMsg').textContent = '';
+  return marks.length - 1;
+}
+function syncMarkPanel() {
+  const m = marks[selMark];
+  $('mkSel').style.display = m ? 'block' : 'none';
+  if (!m) return;
+  $('mkSelName').textContent = MARK_NAMES[m.type];
+  $('mkLabel').value = m.label || '';
+}
+
+// Dessin 2D
+function drawMarks(keep = () => true) {
+  ctx.strokeStyle = '#ffffff'; ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+  ctx.lineWidth = Math.max(1.5, MARK_LINE * view.scale);
+  for (const ln of markLinks()) {
+    const zm = ln[Math.floor(ln.length / 2)].z;
+    if (!zVisible(zm) || !keep(zm)) continue;
+    ctx.beginPath(); ln.forEach((q, k) => { const Q = P(q); k ? ctx.lineTo(Q.x, Q.y) : ctx.moveTo(Q.x, Q.y); }); ctx.stroke();
+  }
+  for (let i = 0; i < marks.length; i++) {
+    const m = marks[i];
+    if (!markVisible(m) || !keep(markFrame(m).z)) continue;
+    const { lines, discs, lab } = markShapes(m);
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = Math.max(1.5, MARK_LINE * view.scale);
+    ctx.lineJoin = 'round';
+    for (const ln of lines) { ctx.beginPath(); ln.forEach((q, k) => { const Q = P(q); k ? ctx.lineTo(Q.x, Q.y) : ctx.moveTo(Q.x, Q.y); }); ctx.stroke(); }
+    ctx.fillStyle = '#ffffff';
+    for (const d of discs) { const C = P(d.c); ctx.beginPath(); ctx.arc(C.x, C.y, Math.max(3, d.r * view.scale), 0, Math.PI * 2); ctx.fill(); }
+    if (lab) {
+      const L = P(lab.p);
+      ctx.font = 'bold 11px system-ui, sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w = ctx.measureText(lab.t).width + 8;
+      ctx.fillStyle = 'rgba(255,255,255,0.92)'; ctx.fillRect(L.x - w / 2, L.y - 8, w, 16);
+      ctx.fillStyle = '#222'; ctx.fillText(lab.t, L.x, L.y);
+    }
+    if (mode === 'mark' && i === selMark) {
+      const C = P(m), r = Math.max(10, ((m.type === 'in' || m.type === 'out') ? Math.max(m.len, m.wid) / 2 : m.size / 2) * view.scale + 4);
+      ctx.setLineDash([5, 4]); ctx.strokeStyle = '#1e6fff'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(C.x, C.y, r, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+  }
+}
+// Géométrie 3D (peinture blanche posée sur la chaussée)
+function marks3D(group) {
+  if (!marks.length) return;
+  const pos = [], idx = [];
+  const quad = (a, b, c, d, z) => {
+    const k = pos.length / 3;
+    for (const p of [a, b, c, d]) pos.push(p.x, z, p.y);
+    idx.push(k, k + 1, k + 2, k, k + 2, k + 3);
+  };
+  // trait peint : bande fine posée sur la chaussée (hauteur propre à chaque point si connue)
+  function addLine3D(ln, z) {
+    for (let k = 1; k < ln.length; k++) {
+      const a = ln[k - 1], b = ln[k], dx = b.x - a.x, dy = b.y - a.y, l = Math.hypot(dx, dy) || 1;
+      const nx = -dy / l * MARK_LINE / 2, ny = dx / l * MARK_LINE / 2;
+      const za = a.z !== undefined ? a.z + 0.007 : z, zb = b.z !== undefined ? b.z + 0.007 : z, kk = pos.length / 3;
+      pos.push(a.x + nx, za, a.y + ny, b.x + nx, zb, b.y + ny, b.x - nx, zb, b.y - ny, a.x - nx, za, a.y - ny);
+      idx.push(kk, kk + 1, kk + 2, kk, kk + 2, kk + 3);
+    }
+  }
+  for (const ln of markLinks()) addLine3D(ln, 0.007);
+  for (const m of marks) {
+    const { F, lines, discs } = markShapes(m), z = F.z + 0.007;
+    for (const ln of lines) addLine3D(ln, z);
+    for (const d of discs) {
+      const k = pos.length / 3;
+      pos.push(d.c.x, z, d.c.y);
+      for (let i = 0; i <= 24; i++) { const t = i / 24 * Math.PI * 2; pos.push(d.c.x + Math.cos(t) * d.r, z, d.c.y + Math.sin(t) * d.r); }
+      for (let i = 1; i <= 24; i++) idx.push(k, k + i, k + i + 1);
+    }
+  }
+  group.add(meshFrom(pos, idx, new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })));
+}
+// Dessin dans le PDF
+function marksPDF(Pg, V, keep = () => true) {
+  Pg.ops.push('0 J', '1 j'); Pg.lw(Math.max(0.6, MARK_LINE * V.k)); Pg.col('#ffffff', true);
+  for (const ln of markLinks()) if (keep(ln[Math.floor(ln.length / 2)].z)) Pg.poly(ln.map(q => [V.X(q.x), V.Y(q.y)]));
+  for (const m of marks) {
+    if (!keep(markFrame(m).z)) continue;
+    const { lines, discs, lab } = markShapes(m);
+    Pg.ops.push('0 J'); Pg.lw(Math.max(0.6, MARK_LINE * V.k)); Pg.col('#ffffff', true);
+    for (const ln of lines) Pg.poly(ln.map(q => [V.X(q.x), V.Y(q.y)]));
+    Pg.col('#ffffff', false);
+    for (const d of discs) Pg.circle(V.X(d.c.x), V.Y(d.c.y), Math.max(1.5, d.r * V.k), 'f');
+    if (lab) Pg.tag(V.X(lab.p.x), V.Y(lab.p.y) - 3, 6.5, lab.t, '#333333');
+  }
+}
+
+// Panneau
+$('mkLabel').addEventListener('input', () => { const m = marks[selMark]; if (m) { m.label = $('mkLabel').value; draw(); scheduleSave(); } });
+const rotMark = d => { const m = marks[selMark]; if (!m) return; snap(); m.rot = ((m.rot || 0) + d) % 360; update(); };
+$('mkRotL').onclick = () => rotMark(-15);
+$('mkRotR').onclick = () => rotMark(15);
+$('mkFlip').onclick = () => rotMark(180);
+$('mkDel').onclick = () => { if (selMark < 0) return; snap(); marks.splice(selMark, 1); selMark = -1; syncMarkPanel(); update(); };
+// Les tailles du panneau s'appliquent aux nouveaux marquages et au marquage sélectionné
+[['mkPoint', 'size', ['point']], ['mkCross', 'size', ['cross']], ['mkLen', 'len', ['in', 'out']], ['mkWid', 'wid', ['in', 'out']]].forEach(([id, key, types]) =>
+  $(id).addEventListener('input', () => { const m = marks[selMark]; if (m && types.includes(m.type)) { m[key] = num(id); update(); } }));
+$('mkType').addEventListener('change', () => { if (mode !== 'mark') setMode('mark'); });
+['mkLink', 'mkLinkStyle'].forEach(id => $(id).addEventListener('change', () => update()));
+
+// ---------- Onglets ----------
+document.querySelectorAll('#tabs .tab').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs .tab').forEach(t => t.classList.toggle('active', t === b));
+  document.querySelectorAll('.tabpage').forEach(p => p.classList.toggle('active', p.id === b.dataset.tab));
+  try { b.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch (e) {}   // téléphone : l'onglet actif reste visible
+  $('panel').scrollTop = 0;
+});
+
+showTabsFor(mode);
+resizeCanvas();
+fit();
+setMode('draw');
+restoreAutosave();
+</script>
+</body>
+</html>
