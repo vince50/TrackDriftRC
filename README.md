@@ -31,6 +31,7 @@ On indique les dimensions de l'espace et la largeur de voie, on dessine la piste
 1. Télécharger `index.html`.
 2. L'ouvrir dans un navigateur récent (Chrome, Edge, Firefox, Safari).
 3. Régler l'espace disponible et la largeur de voie dans l'onglet **Piste**, puis dessiner avec l'outil **✏️ Tracer**.
+4. le lien direct https://vince50.github.io/TrackDriftRC/
 
 Aucune installation et aucun serveur ne sont nécessaires. Seule la **vue 3D** charge la bibliothèque Three.js depuis un CDN : elle a besoin d'une connexion internet.
 
